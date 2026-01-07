@@ -107,7 +107,7 @@ document.getElementById('nextToStep2').addEventListener('click', () => {
     // Phone: check for at least 9 digits
     const cleanTel = telefono.value.replace(/\D/g, '');
     if (cleanTel.length < 9) {
-      alert("Per favore, inserisci un numero di telefono valido.");
+      showCustomAlert("Per favore, inserisci un numero di telefono valido.");
       telefono.classList.add('shake');
       setTimeout(() => telefono.classList.remove('shake'), 400);
       valid = false;
@@ -115,7 +115,7 @@ document.getElementById('nextToStep2').addEventListener('click', () => {
     // Email: basic regex check
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.value.trim())) {
-      alert("Per favore, inserisci un indirizzo email valido.");
+      showCustomAlert("Per favore, inserisci un indirizzo email valido.");
       email.classList.add('shake');
       setTimeout(() => email.classList.remove('shake'), 400);
       valid = false;
@@ -159,7 +159,7 @@ document.getElementById('nextToStepPackage').addEventListener('click', () => {
 document.getElementById('nextToStepCakePage').addEventListener('click', () => {
   const selected = document.querySelector('input[name="pacchetto"]:checked');
   if (!selected) {
-    alert("Per favore, seleziona un pacchetto menu.");
+    showCustomAlert("Per favore, seleziona un pacchetto menu.");
     return;
   }
   showStep('step_cake');
@@ -170,7 +170,7 @@ document.getElementById('nextToStepCakePage').addEventListener('click', () => {
 document.getElementById('nextToStepCake').addEventListener('click', () => {
   const selected = document.querySelector('input[name="torta"]:checked');
   if (!selected) {
-    alert("Per favore, seleziona una torta.");
+    showCustomAlert("Per favore, seleziona una torta.");
     return;
   }
   showStep('step3'); // Duration
@@ -180,7 +180,7 @@ document.getElementById('nextToStepCake').addEventListener('click', () => {
 document.getElementById('nextToStep4').addEventListener('click', () => {
   const selected = document.querySelector('input[name="durata"]:checked');
   if (!selected) {
-    alert("Per favore, seleziona la durata della festa.");
+    showCustomAlert("Per favore, seleziona la durata della festa.");
     return;
   }
   updateSummaryView();
@@ -442,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showStep('step_success');
         document.getElementById('floatingCost').classList.add('hidden');
       } else {
-        alert("Ops! Qualcosa è andato storto nel salvataggio. Riprova tra un momento.");
+        showCustomAlert("Ops! Qualcosa è andato storto nel salvataggio. Riprova tra un momento.");
         confirmBtn.disabled = false;
         confirmBtn.textContent = "Conferma Prenotazione";
       }
@@ -518,3 +518,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 });
+
+// Custom Alert Functions
+function showCustomAlert(msg) {
+  const modal = document.getElementById('customAlert');
+  const textArea = document.getElementById('alertMessage');
+  if (modal && textArea) {
+    textArea.textContent = msg;
+    modal.style.display = 'flex';
+  }
+}
+
+function closeCustomAlert() {
+  const modal = document.getElementById('customAlert');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
