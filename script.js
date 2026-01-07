@@ -86,16 +86,15 @@ function showStep(stepId) {
 
 // Next Step Handlers
 document.getElementById('nextToStep2').addEventListener('click', () => {
-  // VALIDATION TEMPORARILY DISABLED
-  /*
   const nome = document.getElementById('nome');
   const cognome = document.getElementById('cognome');
   const telefono = document.getElementById('telefono');
   const festeggiato = document.getElementById('festeggiato');
   const anni = document.getElementById('anni_festeggiato');
+  const email = document.getElementById('email');
 
   let valid = true;
-  [nome, cognome, telefono, festeggiato, anni].forEach(input => {
+  [nome, cognome, telefono, festeggiato, anni, email].forEach(input => {
     if (!input.value.trim()) {
       input.classList.add('shake');
       setTimeout(() => input.classList.remove('shake'), 400);
@@ -103,8 +102,6 @@ document.getElementById('nextToStep2').addEventListener('click', () => {
     }
   });
   if (valid) showStep('step2');
-  */
-  showStep('step2'); // Skip validation
 });
 
 document.getElementById('nextToStepPackage').addEventListener('click', () => {
