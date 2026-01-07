@@ -105,7 +105,24 @@ document.getElementById('nextToStep2').addEventListener('click', () => {
 });
 
 document.getElementById('nextToStepPackage').addEventListener('click', () => {
+  const dataFesta = document.getElementById('data');
+  const part = document.getElementById('partecipanti');
   const msg = document.getElementById('availability-msg');
+
+  let valid = true;
+  if (!dataFesta.value) {
+    dataFesta.classList.add('shake');
+    setTimeout(() => dataFesta.classList.remove('shake'), 400);
+    valid = false;
+  }
+  if (!part.value || part.value < 1) {
+    part.classList.add('shake');
+    setTimeout(() => part.classList.remove('shake'), 400);
+    valid = false;
+  }
+
+  if (!valid) return;
+
   if (msg.dataset.available === 'false') {
     msg.classList.add('shake');
     setTimeout(() => msg.classList.remove('shake'), 400);
@@ -119,17 +136,32 @@ document.getElementById('nextToStepPackage').addEventListener('click', () => {
 
 // From Package to Cake
 document.getElementById('nextToStepCakePage').addEventListener('click', () => {
+  const selected = document.querySelector('input[name="pacchetto"]:checked');
+  if (!selected) {
+    alert("Per favore, seleziona un pacchetto menu.");
+    return;
+  }
   showStep('step_cake');
-  updateRealTimeCost(); // No impact on cost, but keeps badge coherent
+  updateRealTimeCost();
 });
 
 // From Cake to Duration
 document.getElementById('nextToStepCake').addEventListener('click', () => {
+  const selected = document.querySelector('input[name="torta"]:checked');
+  if (!selected) {
+    alert("Per favore, seleziona una torta.");
+    return;
+  }
   showStep('step3'); // Duration
-  updateRealTimeCost(); // Adds lanes
+  updateRealTimeCost();
 });
 
 document.getElementById('nextToStep4').addEventListener('click', () => {
+  const selected = document.querySelector('input[name="durata"]:checked');
+  if (!selected) {
+    alert("Per favore, seleziona la durata della festa.");
+    return;
+  }
   updateSummaryView();
   showStep('step4');
 });
