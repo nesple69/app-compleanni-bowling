@@ -101,6 +101,27 @@ document.getElementById('nextToStep2').addEventListener('click', () => {
       valid = false;
     }
   });
+
+  // Specific format checks if basic empty check passed
+  if (valid) {
+    // Phone: check for at least 9 digits
+    const cleanTel = telefono.value.replace(/\D/g, '');
+    if (cleanTel.length < 9) {
+      alert("Per favore, inserisci un numero di telefono valido.");
+      telefono.classList.add('shake');
+      setTimeout(() => telefono.classList.remove('shake'), 400);
+      valid = false;
+    }
+    // Email: basic regex check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.value.trim())) {
+      alert("Per favore, inserisci un indirizzo email valido.");
+      email.classList.add('shake');
+      setTimeout(() => email.classList.remove('shake'), 400);
+      valid = false;
+    }
+  }
+
   if (valid) showStep('step2');
 });
 
