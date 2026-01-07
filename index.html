@@ -272,7 +272,10 @@
 
       <!-- Step 3 -->
       <section class="section step" id="step3" style="display:none;">
-        <h2>Scegli Durata</h2>
+        <h2 style="margin-bottom: 0.2rem;">Scegli Durata</h2>
+        <p style="text-align: center; font-weight: normal; font-size: 0.9rem; margin-bottom: 1.5rem; color: #ccc;">
+          Massimo 6 giocatori per pista</p>
+
         <div class="duration-options">
           <label class="duration-card">
             <input type="radio" name="durata" value="1h">
@@ -304,18 +307,6 @@
           </label>
         </div>
 
-        <hr style="border: 0; border-top: 1px solid var(--color-accent); margin: 1.5rem 0; opacity: 0.5;">
-
-        <div class="single-option">
-          <label class="duration-card" style="width: 100%; max-width: none; display: flex !important;">
-            <input type="radio" name="durata" value="a_partita">
-            <div class="card-content"
-              style="flex-direction: row; justify-content: center; gap: 1rem; align-items: center;">
-              <span class="duration-label">Acquisto a Partita</span>
-              <span class="price-label" style="font-size: 1rem;">6 € a giocatore per ogni partita</span>
-            </div>
-          </label>
-        </div>
         <div class="buttons-row">
           <button type="button" class="btn" id="backToStepCakePage">Indietro</button>
           <button type="button" class="btn btn-primary" id="nextToStep4">Riepilogo</button>
