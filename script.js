@@ -93,36 +93,62 @@ document.getElementById('nextToStep2').addEventListener('click', () => {
   const anni = document.getElementById('anni_festeggiato');
   const email = document.getElementById('email');
 
-  let valid = true;
-  [nome, cognome, telefono, festeggiato, anni, email].forEach(input => {
-    if (!input.value.trim()) {
-      input.classList.add('shake');
-      setTimeout(() => input.classList.remove('shake'), 400);
-      valid = false;
-    }
-  });
-
-  // Specific format checks if basic empty check passed
-  if (valid) {
-    // Phone: check for at least 9 digits
-    const cleanTel = telefono.value.replace(/\D/g, '');
-    if (cleanTel.length < 9) {
-      showCustomAlert("Per favore, inserisci un numero di telefono valido.");
-      telefono.classList.add('shake');
-      setTimeout(() => telefono.classList.remove('shake'), 400);
-      valid = false;
-    }
-    // Email: basic regex check
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.value.trim())) {
-      showCustomAlert("Per favore, inserisci un indirizzo email valido.");
-      email.classList.add('shake');
-      setTimeout(() => email.classList.remove('shake'), 400);
-      valid = false;
-    }
+  // Basic "Empty" check with descriptive alerts
+  if (!nome.value.trim()) {
+    showCustomAlert("Per favore, inserisci il tuo nome.");
+    nome.classList.add('shake');
+    setTimeout(() => nome.classList.remove('shake'), 400);
+    return;
+  }
+  if (!cognome.value.trim()) {
+    showCustomAlert("Per favore, inserisci il tuo cognome.");
+    cognome.classList.add('shake');
+    setTimeout(() => cognome.classList.remove('shake'), 400);
+    return;
+  }
+  if (!telefono.value.trim()) {
+    showCustomAlert("Per favore, inserisci un numero di telefono.");
+    telefono.classList.add('shake');
+    setTimeout(() => telefono.classList.remove('shake'), 400);
+    return;
+  }
+  if (!festeggiato.value.trim()) {
+    showCustomAlert("Per favore, inserisci il nome del festeggiato.");
+    festeggiato.classList.add('shake');
+    setTimeout(() => festeggiato.classList.remove('shake'), 400);
+    return;
+  }
+  if (!anni.value.trim()) {
+    showCustomAlert("Per favore, inserisci quanti anni compie il festeggiato.");
+    anni.classList.add('shake');
+    setTimeout(() => anni.classList.remove('shake'), 400);
+    return;
+  }
+  if (!email.value.trim()) {
+    showCustomAlert("Per favore, inserisci un indirizzo email.");
+    email.classList.add('shake');
+    setTimeout(() => email.classList.remove('shake'), 400);
+    return;
   }
 
-  if (valid) showStep('step2');
+  // Format checks
+  const cleanTel = telefono.value.replace(/\D/g, '');
+  if (cleanTel.length < 9) {
+    showCustomAlert("Il numero di telefono inserito non sembra corretto (minimo 9 cifre).");
+    telefono.classList.add('shake');
+    setTimeout(() => telefono.classList.remove('shake'), 400);
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email.value.trim())) {
+    showCustomAlert("L'indirizzo email inserito non è nel formato corretto.");
+    email.classList.add('shake');
+    setTimeout(() => email.classList.remove('shake'), 400);
+    return;
+  }
+
+  showStep('step2');
 });
 
 document.getElementById('nextToStepPackage').addEventListener('click', () => {
@@ -132,11 +158,13 @@ document.getElementById('nextToStepPackage').addEventListener('click', () => {
 
   let valid = true;
   if (!dataFesta.value) {
+    showCustomAlert("Per favore, seleziona la data della festa.");
     dataFesta.classList.add('shake');
     setTimeout(() => dataFesta.classList.remove('shake'), 400);
     valid = false;
   }
   if (!part.value || part.value < 1) {
+    showCustomAlert("Il numero di partecipanti non è valido.");
     part.classList.add('shake');
     setTimeout(() => part.classList.remove('shake'), 400);
     valid = false;
@@ -145,6 +173,7 @@ document.getElementById('nextToStepPackage').addEventListener('click', () => {
   if (!valid) return;
 
   if (msg.dataset.available === 'false') {
+    showCustomAlert("L'orario selezionato non è più disponibile. Per favore, cambialo.");
     msg.classList.add('shake');
     setTimeout(() => msg.classList.remove('shake'), 400);
     return;
