@@ -197,11 +197,7 @@ function updateRealTimeCost() {
 
   let laneCost = 0;
   if (includeLanes) {
-    if (duration === 'a_partita') {
-      laneCost = part * 6; // 6€ per player per game
-    } else {
-      laneCost = lanes * (PRICE_PER_LANE[duration] || 0);
-    }
+    laneCost = lanes * (PRICE_PER_LANE[duration] || 0);
   }
 
   const menuPrice = MENUS[selectedMenuKey] ? MENUS[selectedMenuKey].price : 0;
