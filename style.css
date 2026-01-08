@@ -25,7 +25,7 @@
 }
 
 body {
-  background: url('background.jpg') center center / cover no-repeat fixed;
+  background: url('background.jpg') center center / contain repeat fixed;
   color: var(--color-light);
   min-height: 100vh;
   display: flex;
@@ -33,6 +33,21 @@ body {
   align-items: center;
   overflow-x: hidden;
   position: relative;
+}
+
+/* Responsive background for tablets and mobile */
+@media (max-width: 768px) {
+  body {
+    background-size: auto 100%;
+    background-position: center center;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    background-size: auto 120%;
+    background-position: center center;
+  }
 }
 
 /* Semi-transparent overlay to ensure text readability */
