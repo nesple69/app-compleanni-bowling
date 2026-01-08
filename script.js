@@ -180,6 +180,21 @@ document.getElementById('nextToStepPackage').addEventListener('click', () => {
 
   if (!valid) return;
 
+  // Check minimum participants based on time slot
+  let selectedTime = '17:00';
+  document.getElementsByName('fascia_oraria').forEach(r => { if (r.checked) selectedTime = r.value; });
+
+  let minRequired = 15; // default for 17:00
+  if (selectedTime === '18:00') minRequired = 12;
+  if (selectedTime === '19:00') minRequired = 10;
+
+  if (parseInt(part.value) < minRequired) {
+    showCustomAlert(`Per l'orario delle ${selectedTime} sono richiesti almeno ${minRequired} partecipanti.`);
+    part.classList.add('shake');
+    setTimeout(() => part.classList.remove('shake'), 400);
+    return;
+  }
+
   if (msg.dataset.available === 'false') {
     showCustomAlert("L'orario selezionato non è più disponibile. Per favore, cambialo.");
     msg.classList.add('shake');
@@ -324,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let min = 15; // default for 17:00
     if (selectedTime === '18:00') min = 12;
-    if (selectedTime === '19:00' || selectedTime === '19:30') min = 10;
+    if (selectedTime === '19:00') min = 10;
 
     partInput.min = min;
     if (parseInt(partInput.value) < min) {
@@ -479,10 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showStep('step_success');
         document.getElementById('floatingCost').classList.add('hidden');
 
-        // 4. Auto-redirect to home after 4 seconds
-        setTimeout(() => {
-          location.reload();
-        }, 4000);
+        // Timer will be triggered by user choice (WhatsApp or Skip button)
       } else {
         showCustomAlert("Ops! Qualcosa è andato storto nel salvataggio. Riprova tra un momento.");
         confirmBtn.disabled = false;
@@ -518,6 +530,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Use window.open with _blank to keep the application open in the current tab
       window.open(waUrl, '_blank');
+
+      // Auto-reset after 3 seconds
+      setTimeout(() => {
+        location.reload();
+      }, 3000);
+    });
+  }
+
+  // Skip Invitation Button
+  const skipInviteBtn = document.getElementById('skipInviteWa');
+  if (skipInviteBtn) {
+    skipInviteBtn.addEventListener('click', () => {
+      // Auto-reset after 3 seconds
+      setTimeout(() => {
+        location.reload();
+      }, 3000);
     });
   }
 

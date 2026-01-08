@@ -219,13 +219,6 @@
               <span class="time-sub">Min 10 Persone</span>
             </div>
           </label>
-          <label class="time-card">
-            <input type="radio" name="fascia_oraria" value="19:30">
-            <div class="card-content">
-              <span class="time-label">19:30</span>
-              <span class="time-sub">Min 10 Persone</span>
-            </div>
-          </label>
         </div>
 
         <label>Numero Partecipanti*</label>
@@ -424,15 +417,20 @@
         <div class="invitation-box"
           style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 20px; border: 2px dashed #25D366; margin-bottom: 2rem;">
           <h3 style="color: #25D366; margin-bottom: 1rem;">Il tuo Invito Digitale 🎫</h3>
-          <p style="margin-bottom: 1.5rem;">Clicca qui sotto per ricevere su WhatsApp l'invito pronto da inoltrare
-            agli altri genitori!</p>
-          <button type="button" class="btn btn-primary" id="sendInviteWa"
-            style="background-color: #25D366; border-color: #25D366;">
-            Ricevi Invito su WhatsApp
-          </button>
+          <p style="margin-bottom: 1.5rem;">Vuoi ricevere su WhatsApp l'invito pronto da inoltrare agli altri genitori?
+          </p>
+
+          <div class="buttons-row">
+            <button type="button" class="btn btn-primary" id="sendInviteWa"
+              style="background-color: #25D366; border-color: #25D366;">
+              Sì, Invia su WhatsApp
+            </button>
+            <button type="button" class="btn" id="skipInviteWa">
+              No, Grazie
+            </button>
+          </div>
         </div>
 
-        <button type="button" class="btn" onclick="location.reload()">Nuova Prenotazione</button>
       </section>
     </div>
   </main>
