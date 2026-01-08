@@ -148,6 +148,14 @@ document.getElementById('nextToStep2').addEventListener('click', () => {
     return;
   }
 
+  const gdpr = document.getElementById('gdpr_consent');
+  if (!gdpr.checked) {
+    showCustomAlert("Per favore, accetta il trattamento dei dati personali (GDPR) per proseguire.");
+    gdpr.classList.add('shake');
+    setTimeout(() => gdpr.classList.remove('shake'), 400);
+    return;
+  }
+
   showStep('step2');
 });
 
@@ -527,6 +535,8 @@ document.addEventListener('DOMContentLoaded', () => {
       altre_richieste: document.getElementById('altre_richieste').value,
       durata: document.querySelector('input[name="durata"]:checked')?.value,
       foto_torta: document.getElementById('foto_torta').checked ? 'Sì' : 'No',
+      gdpr: document.getElementById('gdpr_consent').checked ? 'Accettato' : 'No',
+      marketing: document.getElementById('marketing_consent').checked ? 'Sì' : 'No',
       totale: document.getElementById('totalSpan').textContent
     };
 
