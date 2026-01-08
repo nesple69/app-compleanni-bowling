@@ -35,24 +35,24 @@ body {
   position: relative;
 }
 
-/* Responsive background for tablets - show more of the pattern */
+/* Responsive background for tablets - show more vertical coverage */
 @media (max-width: 1024px) {
   body {
-    background-size: 150%;
+    background-size: auto 100%;
     background-position: center center;
   }
 }
 
 @media (max-width: 768px) {
   body {
-    background-size: 200%;
+    background-size: auto 110%;
     background-position: center center;
   }
 }
 
 @media (max-width: 480px) {
   body {
-    background-size: 250%;
+    background-size: auto 120%;
     background-position: center center;
   }
 }
