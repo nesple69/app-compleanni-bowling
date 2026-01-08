@@ -149,6 +149,34 @@
 
         <label>Email*</label>
         <input type="email" id="email" required>
+
+        <!-- GDPR Section -->
+        <div class="gdpr-section">
+          <h3 class="gdpr-title">Privacy e Consenso</h3>
+          
+          <!-- Mandatory: Booking Management -->
+          <label class="gdpr-label gdpr-required">
+            <input type="checkbox" id="gdpr_consent" required>
+            <span class="gdpr-text">
+              <strong>Accetto il trattamento dei miei dati personali</strong> ai sensi del GDPR (Regolamento UE 2016/679) 
+              per la gestione della prenotazione. <em>(Obbligatorio)</em>
+            </span>
+          </label>
+
+          <!-- Optional: Marketing -->
+          <label class="gdpr-label gdpr-optional">
+            <input type="checkbox" id="marketing_consent">
+            <span class="gdpr-text">
+              Acconsento a ricevere comunicazioni promozionali, offerte speciali e novità 
+              da Bowling Valdera via email o telefono. <em>(Facoltativo)</em>
+            </span>
+          </label>
+
+          <p class="gdpr-note">
+            Puoi revocare il consenso in qualsiasi momento contattandoci.
+          </p>
+        </div>
+
         <div class="buttons-row">
           <button type="button" class="btn btn-primary" id="nextToStep2">Avanti</button>
         </div>
