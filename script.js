@@ -478,6 +478,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3. Transition to Success Step
         showStep('step_success');
         document.getElementById('floatingCost').classList.add('hidden');
+
+        // 4. Auto-redirect to home after 4 seconds
+        setTimeout(() => {
+          location.reload();
+        }, 4000);
       } else {
         showCustomAlert("Ops! Qualcosa è andato storto nel salvataggio. Riprova tra un momento.");
         confirmBtn.disabled = false;
