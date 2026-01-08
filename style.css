@@ -25,7 +25,7 @@
 }
 
 body {
-  background: url('assets/background.jpg') center center / cover no-repeat fixed;
+  background: url('background.jpg') ...
   color: var(--color-light);
   min-height: 100vh;
   display: flex;
@@ -970,4 +970,5 @@ header.header {
   margin-bottom: 0;
   font-style: italic;
   text-align: center;
+
 }
