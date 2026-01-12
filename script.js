@@ -377,6 +377,17 @@ async function checkAvailability() {
   const d = date.getDate();
   const m = date.getMonth() + 1;
 
+  // 0. Rule: No past dates
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time to midnight for accurate comparison
+  const selectedDate = new Date(dateStr);
+  selectedDate.setHours(0, 0, 0, 0);
+
+  if (selectedDate < today) {
+    showUnavailable("Non è possibile prenotare una data passata. Seleziona una data futura.");
+    return;
+  }
+
   // 1. Rule: No Wednesday
   if (day === 3) {
     showUnavailable("Spiacenti, il Mercoledì non accettiamo compleanni.");
