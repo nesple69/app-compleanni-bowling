@@ -410,7 +410,7 @@ async function checkAvailability() {
   }
 
   // 4. Calendar Check (Apps Script)
-  const scriptUrl = 'https://script.google.com/macros/s/AKfycbzVagqTR0Tsn7jRNpheHLrAJUwWWz0392gudWwM05mInY2e4DarKgwMml4rmqgG1V8F/exec';
+  const scriptUrl = 'https://script.google.com/macros/s/AKfycbygn8iNa42edlRz3yl8W3cQiDXdwM-ecHcjtDp8LVD9e4ra2XuDNq2DJHVIU3P01uEV/exec';
   try {
     const response = await fetch(`${scriptUrl}?date=${dateStr}&time=${time}`);
     const result = await response.json();
@@ -563,13 +563,18 @@ document.addEventListener('DOMContentLoaded', () => {
   async function saveToDatabase() {
     const nome = document.getElementById('nome').value;
     const cognome = document.getElementById('cognome').value;
+
+    // Convert date from YYYY-MM-DD to DD-MM-YYYY (Italian format)
+    const dataFestaRaw = document.getElementById('data').value;
+    const dataFestaItalian = dataFestaRaw ? dataFestaRaw.split('-').reverse().join('-') : '';
+
     const data = {
       festeggiato: document.getElementById('festeggiato').value,
       anni: (document.getElementById('anni_festeggiato') || { value: '' }).value,
       cliente: `${nome} ${cognome}`.trim(),
       telefono: document.getElementById('telefono').value,
       email: document.getElementById('email').value.trim(),
-      data_festa: document.getElementById('data').value,
+      data_festa: dataFestaItalian,
       ora: document.querySelector('input[name="fascia_oraria"]:checked')?.value,
       partecipanti: document.getElementById('partecipanti').value,
       menu: document.querySelector('input[name="pacchetto"]:checked')?.value,
@@ -584,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
       totale: document.getElementById('totalSpan').textContent
     };
 
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbzVagqTR0Tsn7jRNpheHLrAJUwWWz0392gudWwM05mInY2e4DarKgwMml4rmqgG1V8F/exec';
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbygn8iNa42edlRz3yl8W3cQiDXdwM-ecHcjtDp8LVD9e4ra2XuDNq2DJHVIU3P01uEV/exec';
 
     try {
       // Usiamo 'text/plain' per evitare il preflight CORS che Apps Script non gestisce bene
