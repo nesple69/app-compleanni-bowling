@@ -410,7 +410,7 @@ async function checkAvailability() {
   }
 
   // 4. Calendar Check (Apps Script)
-  const scriptUrl = 'https://script.google.com/macros/s/AKfycbzHfDI3xdiq4L2U0My7jCSUEnJ2sNGE040ZEyrl9tM-gyb3-CsHC27DVv1UtX2LjgF8/exec';
+  const scriptUrl = 'https://script.google.com/macros/s/AKfycbzBUSpATfJw5nK7Ja-z8tY3K5qocNLTDm3yXptoaZcT3Ywx7H4LtfkzyVb7PAPeB7mM/exec';
   try {
     const response = await fetch(`${scriptUrl}?date=${dateStr}&time=${time}`);
     const result = await response.json();
@@ -589,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
       totale: document.getElementById('totalSpan').textContent
     };
 
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbzHfDI3xdiq4L2U0My7jCSUEnJ2sNGE040ZEyrl9tM-gyb3-CsHC27DVv1UtX2LjgF8/exec';
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbzBUSpATfJw5nK7Ja-z8tY3K5qocNLTDm3yXptoaZcT3Ywx7H4LtfkzyVb7PAPeB7mM/exec';
 
     try {
       // Usiamo 'text/plain' per evitare il preflight CORS che Apps Script non gestisce bene
