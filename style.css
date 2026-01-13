@@ -4,6 +4,15 @@
    Dark mode enabled with subtle gradients and micro‑animations.
    ------------------------------------------------------------ */
 
+/* Lobster Font - Local */
+@font-face {
+  font-family: 'Lobster';
+  src: url('Lobster-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --color-primary: #b71c1c;
   /* Rosso Bowling */
