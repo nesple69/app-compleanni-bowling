@@ -422,25 +422,41 @@ async function checkAvailability() {
 
   // 4. Calendar Check (Apps Script)
   const scriptUrl = 'https://script.google.com/macros/s/AKfycbzBUSpATfJw5nK7Ja-z8tY3K5qocNLTDm3yXptoaZcT3Ywx7H4LtfkzyVb7PAPeB7mM/exec';
+  const nextBtnStep2 = document.getElementById('nextFromStep2ToStep1');
+
+  // Convert date to Italian format DD-MM-YYYY for the script
+  const dateParts = dateStr.split('-');
+  const dateItalian = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+
+  // Use AbortController for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
+
   try {
-    const response = await fetch(`${scriptUrl}?date=${dateStr}&time=${time}`);
+    const response = await fetch(`${scriptUrl}?date=${dateItalian}&time=${time}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const result = await response.json();
 
     if (result.available) {
       msg.textContent = "✅ Orario Disponibile!";
       msg.style.color = "#fff";
       msg.dataset.available = "true";
-      nextBtn.disabled = false;
+      nextBtnStep2.disabled = false;
     } else {
       showUnavailable("Orario già prenotato. Scegli un'altra fascia o data.");
     }
   } catch (e) {
+    clearTimeout(timeoutId);
     console.error("Availability check failed", e);
-    // Fallback if script not updated yet
-    msg.textContent = "⚠️ Impossibile verificare disponibilità (aggiorna lo script di Google)";
-    msg.style.color = "orange";
-    msg.dataset.available = "true"; // Allow proceeding for now to avoid blocking
-    nextBtn.disabled = false;
+
+    if (e.name === 'AbortError') {
+      showUnavailable("Il server non risponde (Timeout). Riprova tra un momento.");
+    } else {
+      msg.textContent = "⚠️ Impossibile verificare disponibilità (problema di connessione)";
+      msg.style.color = "orange";
+      msg.dataset.available = "true"; // Allow proceeding as fallback
+      nextBtnStep2.disabled = false;
+    }
   }
 
   function showUnavailable(text) {
