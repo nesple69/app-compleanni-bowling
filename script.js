@@ -57,7 +57,8 @@ function startBooking() {
   // Show Header
   document.querySelector('header').style.display = 'flex';
 
-  // Hidden initially: document.getElementById('floatingCost').classList.remove('hidden');
+  // Start with Step 2 (Availability)
+  showStep('step2');
 
   updateRealTimeCost();
 }
@@ -69,8 +70,8 @@ function showStep(stepId) {
 
   // Update Indicators
   let stepNum = 0;
-  if (stepId === 'step1') stepNum = 1;
-  if (stepId === 'step2') stepNum = 2;
+  if (stepId === 'step2') stepNum = 1;
+  if (stepId === 'step1') stepNum = 2;
   if (stepId === 'step_package') stepNum = 3;
   if (stepId === 'step_cake') stepNum = 4;
   if (stepId === 'step3') stepNum = 5;
@@ -85,7 +86,8 @@ function showStep(stepId) {
 }
 
 // Next Step Handlers
-document.getElementById('nextToStep2').addEventListener('click', () => {
+// Step 1 (Contact) -> Step Package
+document.getElementById('nextFromStep1ToPackage').addEventListener('click', () => {
   const nome = document.getElementById('nome');
   const cognome = document.getElementById('cognome');
   const telefono = document.getElementById('telefono');
@@ -156,10 +158,13 @@ document.getElementById('nextToStep2').addEventListener('click', () => {
     return;
   }
 
-  showStep('step2');
+  showStep('step_package');
+  updateRealTimeCost();
+  document.getElementById('floatingCost').classList.remove('hidden');
 });
 
-document.getElementById('nextToStepPackage').addEventListener('click', () => {
+// Step 2 (Availability) -> Step 1 (Contact)
+document.getElementById('nextFromStep2ToStep1').addEventListener('click', () => {
   const dataFesta = document.getElementById('data');
   const part = document.getElementById('partecipanti');
   const msg = document.getElementById('availability-msg');
@@ -202,9 +207,8 @@ document.getElementById('nextToStepPackage').addEventListener('click', () => {
     return;
   }
 
-  showStep('step_package');
+  showStep('step1');
   updateRealTimeCost();
-  document.getElementById('floatingCost').classList.remove('hidden');
 });
 
 // From Package to Cake
@@ -240,9 +244,16 @@ document.getElementById('nextToStep4').addEventListener('click', () => {
 });
 
 // Back Handlers
-document.getElementById('backToStep1').addEventListener('click', () => showStep('step1'));
-document.getElementById('backToStep2').addEventListener('click', () => {
-  showStep('step2');
+document.getElementById('backFromStep2ToWelcome').addEventListener('click', () => {
+  document.getElementById('bookingSteps').style.display = 'none';
+  document.getElementById('welcomeStep').style.display = 'block';
+  document.querySelector('header').style.display = 'none';
+});
+
+document.getElementById('backFromStep1ToStep2').addEventListener('click', () => showStep('step2'));
+
+document.getElementById('backFromPackageToStep1').addEventListener('click', () => {
+  showStep('step1');
   document.getElementById('floatingCost').classList.add('hidden');
 });
 document.getElementById('backToStepPackage').addEventListener('click', () => {

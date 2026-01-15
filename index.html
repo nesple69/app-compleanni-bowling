@@ -138,7 +138,7 @@
       </section>
 
       <!-- Step 1 -->
-      <section class="section step" id="step1">
+      <section class="section step" id="step1" style="display:none;">
         <h2>Dati Contatto e Festeggiato</h2>
         <label>Nome Genitore*</label>
         <input type="text" id="nome" required>
@@ -185,12 +185,13 @@
         </div>
 
         <div class="buttons-row">
-          <button type="button" class="btn btn-primary" id="nextToStep2">Avanti</button>
+          <button type="button" class="btn" id="backFromStep1ToStep2">Indietro</button>
+          <button type="button" class="btn btn-primary" id="nextFromStep1ToPackage">Avanti</button>
         </div>
       </section>
 
       <!-- Step 2 -->
-      <section class="section step" id="step2" style="display:none;">
+      <section class="section step" id="step2">
         <h2>Scegli l'orario della festa</h2>
         <!-- Celebrant fields removed from here -->
         <label>Data Festa*</label>
@@ -228,8 +229,8 @@
         </div>
 
         <div class="buttons-row">
-          <button type="button" class="btn" id="backToStep1">Indietro</button>
-          <button type="button" class="btn btn-primary" id="nextToStepPackage">Avanti</button>
+          <button type="button" class="btn" id="backFromStep2ToWelcome">Indietro</button>
+          <button type="button" class="btn btn-primary" id="nextFromStep2ToStep1">Avanti</button>
         </div>
       </section>
 
@@ -293,7 +294,7 @@
         </div>
 
         <div class="buttons-row">
-          <button type="button" class="btn" id="backToStep2">Indietro</button>
+          <button type="button" class="btn" id="backFromPackageToStep1">Indietro</button>
           <button type="button" class="btn btn-primary" id="nextToStepCakePage">Avanti</button>
         </div>
       </section>
