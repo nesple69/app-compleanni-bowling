@@ -373,7 +373,7 @@ async function checkAvailability() {
   const dateStr = document.getElementById('data').value;
   const time = document.querySelector('input[name="fascia_oraria"]:checked')?.value;
   const msg = document.getElementById('availability-msg');
-  const nextBtn = document.getElementById('nextToStepPackage');
+  const nextBtn = document.getElementById('nextFromStep2ToStep1');
 
   if (!dateStr || !time) return;
 
@@ -422,7 +422,6 @@ async function checkAvailability() {
 
   // 4. Calendar Check (Apps Script)
   const scriptUrl = 'https://script.google.com/macros/s/AKfycbzBUSpATfJw5nK7Ja-z8tY3K5qocNLTDm3yXptoaZcT3Ywx7H4LtfkzyVb7PAPeB7mM/exec';
-  const nextBtnStep2 = document.getElementById('nextFromStep2ToStep1');
 
   // Convert date to Italian format DD-MM-YYYY for the script
   const dateParts = dateStr.split('-');
@@ -441,7 +440,7 @@ async function checkAvailability() {
       msg.textContent = "✅ Orario Disponibile!";
       msg.style.color = "#fff";
       msg.dataset.available = "true";
-      nextBtnStep2.disabled = false;
+      nextBtn.disabled = false;
     } else {
       showUnavailable("Orario già prenotato. Scegli un'altra fascia o data.");
     }
@@ -455,7 +454,7 @@ async function checkAvailability() {
       msg.textContent = "⚠️ Impossibile verificare disponibilità (problema di connessione)";
       msg.style.color = "orange";
       msg.dataset.available = "true"; // Allow proceeding as fallback
-      nextBtnStep2.disabled = false;
+      nextBtn.disabled = false;
     }
   }
 
