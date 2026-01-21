@@ -696,31 +696,3 @@ function closeCustomAlert() {
     modal.style.display = 'none';
   }
 }
-// Aggiungo il codice per salvare su Google Sheets alla fine del file script.js esistente
-
-// URL dello script Google Apps funzionante
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzBUSpATfJw5nK7Ja-z8tY3K5qocNLTDm3yXptoaZcT3Ywx7H4LtfkzyVb7PAPeB7mM/exec';
-
-// Funzione per salvare i dati su Google Sheets
-async function saveToGoogleSheets(bookingData) {
-  try {
-    console.log('📤 Invio dati a Google Sheets:', bookingData);
-    
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(bookingData)
-    });
-    
-    console.log('✅ Dati inviati a Google Sheets');
-    return true;
-  } catch (error) {
-    console.error('❌ Errore salvataggio Google Sheets:', error);
-    return false;
-  }
-}
-
-// Esporta la funzione per usarla nel resto del codice
-window.saveToGoogleSheets = saveToGoogleSheets;
-window.GOOGLE_SCRIPT_URL = GOOGLE_SCRIPT_URL;
