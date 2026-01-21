@@ -138,23 +138,23 @@
       </section>
 
       <!-- Step 1 -->
-      <section class="section step" id="step1">
+      <section class="section step" id="step1" style="display:none;">
         <h2>Dati Contatto e Festeggiato</h2>
-        <label>Nome Genitore*</label>
-        <input type="text" id="nome" required>
-        <label>Cognome Genitore*</label>
-        <input type="text" id="cognome" required>
-        <label>Telefono*</label>
-        <input type="tel" id="telefono" required>
+        <label>Nome Genitore</label>
+        <input type="text" id="nome">
+        <label>Cognome Genitore</label>
+        <input type="text" id="cognome">
+        <label>Telefono</label>
+        <input type="tel" id="telefono">
 
         <!-- Moved Fields -->
-        <label>Nome Festeggiato*</label>
-        <input type="text" id="festeggiato" required>
-        <label>Età Festeggiato*</label>
-        <input type="number" id="anni_festeggiato" required>
+        <label>Nome Festeggiato</label>
+        <input type="text" id="festeggiato">
+        <label>Età Festeggiato</label>
+        <input type="number" id="anni_festeggiato">
 
-        <label>Email*</label>
-        <input type="email" id="email" required>
+        <label>Email</label>
+        <input type="email" id="email">
 
         <!-- GDPR Section -->
         <div class="gdpr-section">
@@ -162,7 +162,7 @@
 
           <!-- Mandatory: Booking Management -->
           <label class="gdpr-label gdpr-required">
-            <input type="checkbox" id="gdpr_consent" required>
+            <input type="checkbox" id="gdpr_consent">
             <span class="gdpr-text">
               <strong>Accetto il trattamento dei miei dati personali</strong> ai sensi del GDPR (Regolamento UE
               2016/679)
@@ -185,51 +185,59 @@
         </div>
 
         <div class="buttons-row">
-          <button type="button" class="btn btn-primary" id="nextToStep2">Avanti</button>
+          <button type="button" class="btn" id="backFromStep1ToStep2">Indietro</button>
+          <button type="button" class="btn btn-primary" id="nextFromStep1ToPackage">Avanti</button>
         </div>
       </section>
 
       <!-- Step 2 -->
-      <section class="section step" id="step2" style="display:none;">
+      <section class="section step" id="step2">
         <h2>Scegli l'orario della festa</h2>
         <!-- Celebrant fields removed from here -->
-        <label>Data Festa*</label>
-        <input type="date" id="data" required>
+        <label>Data Festa</label>
+        <input type="date" id="data">
 
         <h3 class="subtitle">Scegli Orario Inizio</h3>
         <div class="time-options">
-          <label class="time-card">
+          <label class="time-card" data-day-type="weekday">
             <input type="radio" name="fascia_oraria" value="17:00" checked>
             <div class="card-content">
               <span class="time-label">17:00</span>
               <span class="time-sub">Min 15 Persone</span>
             </div>
           </label>
-          <label class="time-card">
+          <label class="time-card" data-day-type="weekday">
             <input type="radio" name="fascia_oraria" value="18:00">
             <div class="card-content">
               <span class="time-label">18:00</span>
               <span class="time-sub">Min 12 Persone</span>
             </div>
           </label>
-          <label class="time-card">
+          <label class="time-card" data-day-type="weekday">
             <input type="radio" name="fascia_oraria" value="19:00">
             <div class="card-content">
               <span class="time-label">19:00</span>
               <span class="time-sub">Min 10 Persone</span>
             </div>
           </label>
+          <label class="time-card" data-day-type="sunday" style="display:none;">
+            <input type="radio" name="fascia_oraria" value="19:30">
+            <div class="card-content">
+              <span class="time-label">19:30</span>
+              <span class="time-sub">Solo Domenica</span>
+            </div>
+          </label>
         </div>
 
-        <label>Numero Partecipanti*</label>
+        <label>Numero Partecipanti</label>
         <input type="number" id="partecipanti" class="input-large" min="12" value="15">
 
         <div id="availability-msg" style="text-align: center; margin-top: 1rem; font-weight: bold; min-height: 1.5rem;">
         </div>
 
         <div class="buttons-row">
-          <button type="button" class="btn" id="backToStep1">Indietro</button>
-          <button type="button" class="btn btn-primary" id="nextToStepPackage">Avanti</button>
+          <button type="button" class="btn" id="backFromStep2ToWelcome">Indietro</button>
+          <button type="button" class="btn btn-primary" id="nextFromStep2ToStep1">Avanti</button>
         </div>
       </section>
 
@@ -292,8 +300,23 @@
           </label>
         </div>
 
+        <!-- Allergy/Intolerance Declaration Section -->
+        <div
+          style="margin-top: 2rem; background: rgba(255, 193, 7, 0.1); border: 2px solid #ffc107; border-radius: 8px; padding: 1.5rem;">
+          <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+            <input type="checkbox" id="allergy_declaration" required
+              style="width: 22px; height: 22px; margin-top: 2px; flex-shrink: 0; cursor: pointer; accent-color: #ffc107;">
+            <span style="font-size: 0.95rem; font-weight: 500; line-height: 1.5; color: #fff;">
+              ⚠️ È obbligatorio comunicare la presenza di intolleranze, allergie o altra forma di problematica legata al
+              cibo o alle bevande.
+              <strong style="display: block; margin-top: 0.5rem; color: #ffc107;">Confermo di aver letto e di impegnarmi
+                a comunicare eventuali allergie/intolleranze.</strong>
+            </span>
+          </label>
+        </div>
+
         <div class="buttons-row">
-          <button type="button" class="btn" id="backToStep2">Indietro</button>
+          <button type="button" class="btn" id="backFromPackageToStep1">Indietro</button>
           <button type="button" class="btn btn-primary" id="nextToStepCakePage">Avanti</button>
         </div>
       </section>
