@@ -57,8 +57,7 @@ function startBooking() {
   // Show Header
   document.querySelector('header').style.display = 'flex';
 
-  // Start with Step 2 (Availability)
-  showStep('step2');
+  // Hidden initially: document.getElementById('floatingCost').classList.remove('hidden');
 
   updateRealTimeCost();
 }
@@ -70,8 +69,8 @@ function showStep(stepId) {
 
   // Update Indicators
   let stepNum = 0;
-  if (stepId === 'step2') stepNum = 1;
-  if (stepId === 'step1') stepNum = 2;
+  if (stepId === 'step1') stepNum = 1;
+  if (stepId === 'step2') stepNum = 2;
   if (stepId === 'step_package') stepNum = 3;
   if (stepId === 'step_cake') stepNum = 4;
   if (stepId === 'step3') stepNum = 5;
@@ -86,8 +85,7 @@ function showStep(stepId) {
 }
 
 // Next Step Handlers
-// Step 1 (Contact) -> Step Package
-document.getElementById('nextFromStep1ToPackage').addEventListener('click', () => {
+document.getElementById('nextToStep2').addEventListener('click', () => {
   const nome = document.getElementById('nome');
   const cognome = document.getElementById('cognome');
   const telefono = document.getElementById('telefono');
@@ -95,8 +93,6 @@ document.getElementById('nextFromStep1ToPackage').addEventListener('click', () =
   const anni = document.getElementById('anni_festeggiato');
   const email = document.getElementById('email');
 
-  // VALIDAZIONI TEMPORANEAMENTE DISATTIVATE
-  /* 
   // Basic "Empty" check with descriptive alerts
   if (!nome.value.trim()) {
     showCustomAlert("Per favore, inserisci il tuo nome.");
@@ -159,21 +155,15 @@ document.getElementById('nextFromStep1ToPackage').addEventListener('click', () =
     setTimeout(() => gdpr.classList.remove('shake'), 400);
     return;
   }
-  */
 
-  showStep('step_package');
-  updateRealTimeCost();
-  document.getElementById('floatingCost').classList.remove('hidden');
+  showStep('step2');
 });
 
-// Step 2 (Availability) -> Step 1 (Contact)
-document.getElementById('nextFromStep2ToStep1').addEventListener('click', () => {
+document.getElementById('nextToStepPackage').addEventListener('click', () => {
   const dataFesta = document.getElementById('data');
   const part = document.getElementById('partecipanti');
   const msg = document.getElementById('availability-msg');
 
-  // VALIDAZIONI TEMPORANEAMENTE DISATTIVATE
-  /*
   let valid = true;
   if (!dataFesta.value) {
     showCustomAlert("Per favore, seleziona la data della festa.");
@@ -211,10 +201,10 @@ document.getElementById('nextFromStep2ToStep1').addEventListener('click', () => 
     setTimeout(() => msg.classList.remove('shake'), 400);
     return;
   }
-  */
 
-  showStep('step1');
+  showStep('step_package');
   updateRealTimeCost();
+  document.getElementById('floatingCost').classList.remove('hidden');
 });
 
 // From Package to Cake
@@ -224,16 +214,6 @@ document.getElementById('nextToStepCakePage').addEventListener('click', () => {
     showCustomAlert("Per favore, seleziona un pacchetto menu.");
     return;
   }
-
-  // Check allergy declaration
-  const allergyCheck = document.getElementById('allergy_declaration');
-  if (!allergyCheck.checked) {
-    showCustomAlert("Per favore, conferma di aver letto l'informativa sulle allergie e intolleranze alimentari.");
-    allergyCheck.parentElement.classList.add('shake');
-    setTimeout(() => allergyCheck.parentElement.classList.remove('shake'), 400);
-    return;
-  }
-
   showStep('step_cake');
   updateRealTimeCost();
 });
@@ -260,16 +240,9 @@ document.getElementById('nextToStep4').addEventListener('click', () => {
 });
 
 // Back Handlers
-document.getElementById('backFromStep2ToWelcome').addEventListener('click', () => {
-  document.getElementById('bookingSteps').style.display = 'none';
-  document.getElementById('welcomeStep').style.display = 'block';
-  document.querySelector('header').style.display = 'none';
-});
-
-document.getElementById('backFromStep1ToStep2').addEventListener('click', () => showStep('step2'));
-
-document.getElementById('backFromPackageToStep1').addEventListener('click', () => {
-  showStep('step1');
+document.getElementById('backToStep1').addEventListener('click', () => showStep('step1'));
+document.getElementById('backToStep2').addEventListener('click', () => {
+  showStep('step2');
   document.getElementById('floatingCost').classList.add('hidden');
 });
 document.getElementById('backToStepPackage').addEventListener('click', () => {
@@ -379,34 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateMinParticipants();
     checkAvailability();
   }));
-
-  // Filter time slots based on selected date (Sunday vs weekdays)
-  document.getElementById('data').addEventListener('change', (e) => {
-    const selectedDate = new Date(e.target.value);
-    const dayOfWeek = selectedDate.getDay(); // 0 = Sunday
-
-    const weekdaySlots = document.querySelectorAll('.time-card[data-day-type="weekday"]');
-    const sundaySlots = document.querySelectorAll('.time-card[data-day-type="sunday"]');
-
-    if (dayOfWeek === 0) {
-      // Sunday: hide weekday slots, show Sunday slot
-      weekdaySlots.forEach(slot => slot.style.display = 'none');
-      sundaySlots.forEach(slot => {
-        slot.style.display = 'flex';
-        slot.querySelector('input').checked = true; // Auto-select 19:30
-      });
-    } else {
-      // Weekday: show weekday slots, hide Sunday slot
-      weekdaySlots.forEach(slot => slot.style.display = 'flex');
-      sundaySlots.forEach(slot => slot.style.display = 'none');
-      // Re-check first weekday slot if Sunday was selected
-      const firstWeekdaySlot = document.querySelector('.time-card[data-day-type="weekday"] input');
-      if (firstWeekdaySlot) firstWeekdaySlot.checked = true;
-    }
-
-    updateMinParticipants();
-    checkAvailability();
-  });
+  document.getElementById('data').addEventListener('change', checkAvailability);
 
   updateMinParticipants(); // Initial check
 });
@@ -416,7 +362,7 @@ async function checkAvailability() {
   const dateStr = document.getElementById('data').value;
   const time = document.querySelector('input[name="fascia_oraria"]:checked')?.value;
   const msg = document.getElementById('availability-msg');
-  const nextBtn = document.getElementById('nextFromStep2ToStep1');
+  const nextBtn = document.getElementById('nextToStepPackage');
 
   if (!dateStr || !time) return;
 
@@ -431,17 +377,14 @@ async function checkAvailability() {
   const d = date.getDate();
   const m = date.getMonth() + 1;
 
-  // 0. Rule: No past dates or past times
-  const now = new Date();
-  const selectedDateTime = new Date(dateStr);
+  // 0. Rule: No past dates
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time to midnight for accurate comparison
+  const selectedDate = new Date(dateStr);
+  selectedDate.setHours(0, 0, 0, 0);
 
-  // Extract hour from time string (e.g., "17:00" -> 17)
-  const [hours, minutes] = time.split(':').map(Number);
-  selectedDateTime.setHours(hours, minutes, 0, 0);
-
-  // Check if selected date+time is in the past
-  if (selectedDateTime < now) {
-    showUnavailable("Non è possibile prenotare una data/orario già passati. Seleziona una data e orario futuri.");
+  if (selectedDate < today) {
+    showUnavailable("Non è possibile prenotare una data passata. Seleziona una data futura.");
     return;
   }
 
@@ -468,18 +411,8 @@ async function checkAvailability() {
 
   // 4. Calendar Check (Apps Script)
   const scriptUrl = 'https://script.google.com/macros/s/AKfycbzBUSpATfJw5nK7Ja-z8tY3K5qocNLTDm3yXptoaZcT3Ywx7H4LtfkzyVb7PAPeB7mM/exec';
-
-  // Convert date to Italian format DD-MM-YYYY for the script
-  const dateParts = dateStr.split('-');
-  const dateItalian = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-
-  // Use AbortController for timeout
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
-
   try {
-    const response = await fetch(`${scriptUrl}?date=${dateItalian}&time=${time}`, { signal: controller.signal });
-    clearTimeout(timeoutId);
+    const response = await fetch(`${scriptUrl}?date=${dateStr}&time=${time}`);
     const result = await response.json();
 
     if (result.available) {
@@ -491,17 +424,12 @@ async function checkAvailability() {
       showUnavailable("Orario già prenotato. Scegli un'altra fascia o data.");
     }
   } catch (e) {
-    clearTimeout(timeoutId);
     console.error("Availability check failed", e);
-
-    if (e.name === 'AbortError') {
-      showUnavailable("Il server non risponde (Timeout). Riprova tra un momento.");
-    } else {
-      msg.textContent = "⚠️ Impossibile verificare disponibilità (problema di connessione)";
-      msg.style.color = "orange";
-      msg.dataset.available = "true"; // Allow proceeding as fallback
-      nextBtn.disabled = false;
-    }
+    // Fallback if script not updated yet
+    msg.textContent = "⚠️ Impossibile verificare disponibilità (aggiorna lo script di Google)";
+    msg.style.color = "orange";
+    msg.dataset.available = "true"; // Allow proceeding for now to avoid blocking
+    nextBtn.disabled = false;
   }
 
   function showUnavailable(text) {
@@ -656,7 +584,6 @@ document.addEventListener('DOMContentLoaded', () => {
       altre_richieste: document.getElementById('altre_richieste').value,
       durata: document.querySelector('input[name="durata"]:checked')?.value,
       foto_torta: document.getElementById('foto_torta').checked ? 'Sì' : 'No',
-      allergie_dichiarate: document.getElementById('allergy_declaration').checked ? 'Confermato' : 'No',
       gdpr: document.getElementById('gdpr_consent').checked ? 'Accettato' : 'No',
       marketing: document.getElementById('marketing_consent').checked ? 'Sì' : 'No',
       totale: document.getElementById('totalSpan').textContent
