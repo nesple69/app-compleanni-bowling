@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#6a0dad">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Bowling Valdera">
+  <title>Prenotazione Bowling Compleanni</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="stylesheet" href="style.css?v=10.0">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Lobster&family=Courier+New&family=Libre+Barcode+39+Text&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <div id="balloon-container"></div>
+
+  <header class="header">
+    <img src="logo_bowling.png" alt="Logo" class="logo">
+  </header>
+
+  <div id="floatingCost" class="floating-cost hidden">
+    <span class="cost-label">Totale Stimato:</span>
+    <span class="cost-value">0,00 €</span>
+  </div>
+
+  <main class="container">
+    <!-- Welcome Step -->
+    <section id="welcomeStep" class="welcome-section">
+      <img src="logo_bowling.png" alt="Bowling Valdera" class="welcome-logo-hero">
+      <h2 class="welcome-title">Vuoi festeggiare un compleanno fantastico?</h2>
+
+      <button class="btn btn-large btn-pulse" onclick="startBooking()">Clicca qui e componi la tua festa</button>
+    </section>
+
+    <!-- Form Steps Container (Initially Hidden) -->
+    <div id="bookingSteps" style="display:none;">
+      <!-- Indicators -->
+      <div class="progress-bar">
+        <div class="step-indicator active" id="ind1">1</div>
+        <div class="step-indicator" id="ind2">2</div>
+        <div class="step-indicator" id="ind3">3</div>
+        <div class="step-indicator" id="ind4">4</div>
+        <div class="step-indicator" id="ind5">5</div>
+        <div class="step-indicator" id="ind6">6</div>
+      </div>
+
+      <!-- Step 1 to Step Package remains same (content omitted for brevity in replace tool but ensuring context matches) -->
+      <!-- ... -->
+
+      <!-- New Step: Cake Selection -->
+      <section class="section step" id="step_cake" style="display:none;">
+        <h2>Scegli la Torta</h2>
+        <div class="package-grid cake-grid">
+          <label class="package-card">
+            <input type="radio" name="torta" value="Pan di Spagna Chantilly" checked>
+            <div class="card-content">
+              <span class="pkg-title">Pan di Spagna</span>
+              <span class="pkg-desc">Ripieno Crema Chantilly</span>
+            </div>
+          </label>
+          <label class="package-card">
+            <input type="radio" name="torta" value="Pan di Spagna Chantilly + Gocce">
+            <div class="card-content">
+              <span class="pkg-title">Pan di Spagna</span>
+              <span class="pkg-desc">Chantilly e Gocce di Cioccolato</span>
+            </div>
+          </label>
+          <label class="package-card">
+            <input type="radio" name="torta" value="Pan di Spagna Cioccolato">
+            <div class="card-content">
+              <span class="pkg-title">Pan di Spagna</span>
+              <span class="pkg-desc">Ripieno Crema al Cioccolato</span>
+            </div>
+          </label>
+          <label class="package-card">
+            <input type="radio" name="torta" value="Pan di Spagna Crema">
+            <div class="card-content">
+              <span class="pkg-title">Pan di Spagna</span>
+              <span class="pkg-desc">Ripieno Crema Pasticcera</span>
+            </div>
+          </label>
+          <label class="package-card">
+            <input type="radio" name="torta" value="Cheesecake Frutti di Bosco">
+            <div class="card-content">
+              <span class="pkg-title">Cheesecake</span>
+              <span class="pkg-desc">Ai Frutti di Bosco</span>
+            </div>
+          </label>
+          <label class="package-card">
+            <input type="radio" name="torta" value="Cheesecake Cioccolato">
+            <div class="card-content">
+              <span class="pkg-title">Cheesecake</span>
+              <span class="pkg-desc">Al Cioccolato</span>
+            </div>
+          </label>
+          <label class="package-card">
+            <input type="radio" name="torta" value="Crostata Cioccolato">
+            <div class="card-content">
+              <span class="pkg-title">Crostata</span>
+              <span class="pkg-desc">Al Cioccolato</span>
+            </div>
+          </label>
+          <label class="package-card">
+            <input type="radio" name="torta" value="Crostata Frutta">
+            <div class="card-content">
+              <span class="pkg-title">Crostata</span>
+              <span class="pkg-desc">Alla Frutta</span>
+            </div>
+          </label>
+        </div>
+
+        <h2 style="margin-top: 2rem;">Cosa vuoi scrivere sulla tua torta?</h2>
+        <input type="text" id="scritta_torta" class="input-large">
+
+        <h2 style="margin-top: 2rem;">Vuoi una foto sulla torta?</h2>
+        <label class="package-card"
+          style="max-width: 350px; margin: 1rem auto; display: flex !important; justify-content: center;">
+          <input type="checkbox" id="foto_torta" value="yes">
+          <div class="card-content" style="flex-direction: row; align-items: center; gap: 10px;">
+            <span style="font-size: 1.5rem;">📸</span>
+            <span class="pkg-title" style="font-size: 1.2rem; margin: 0;">Sì, con foto (+5,00 €)</span>
+          </div>
+        </label>
+
+        <h2 style="margin-top: 2rem;">Altre richieste</h2>
+        <input type="text" id="altre_richieste" class="input-large">
+
+        <div class="buttons-row">
+          <button type="button" class="btn" id="backToStepPackage">Indietro</button>
+          <button type="button" class="btn btn-primary" id="nextToStepCake">Avanti</button>
+        </div>
+      </section>
+
+      <!-- Step 1 -->
+      <section class="section step" id="step1" style="display:none;">
+        <h2>Dati Contatto e Festeggiato</h2>
+        <label>Nome Genitore</label>
+        <input type="text" id="nome">
+        <label>Cognome Genitore</label>
+        <input type="text" id="cognome">
+        <label>Telefono</label>
+        <input type="tel" id="telefono">
+
+        <!-- Moved Fields -->
+        <label>Nome Festeggiato</label>
+        <input type="text" id="festeggiato">
+        <label>Età Festeggiato</label>
+        <input type="number" id="anni_festeggiato">
+
+        <label>Email</label>
+        <input type="email" id="email">
+
+        <!-- GDPR Section -->
+        <div class="gdpr-section">
+          <h3 class="gdpr-title">Privacy e Consenso</h3>
+
+          <!-- Mandatory: Booking Management -->
+          <label class="gdpr-label gdpr-required">
+            <input type="checkbox" id="gdpr_consent">
+            <span class="gdpr-text">
+              <strong>Accetto il trattamento dei miei dati personali</strong> ai sensi del GDPR (Regolamento UE
+              2016/679)
+              per la gestione della prenotazione. <em>(Obbligatorio)</em>
+            </span>
+          </label>
+
+          <!-- Optional: Marketing -->
+          <label class="gdpr-label gdpr-optional">
+            <input type="checkbox" id="marketing_consent">
+            <span class="gdpr-text">
+              Acconsento a ricevere comunicazioni promozionali, offerte speciali e novità
+              da Bowling Valdera via email o telefono. <em>(Facoltativo)</em>
+            </span>
+          </label>
+
+          <p class="gdpr-note">
+            Puoi revocare il consenso in qualsiasi momento contattandoci.
+          </p>
+        </div>
+
+        <div class="buttons-row">
+          <button type="button" class="btn" id="backFromStep1ToStep2">Indietro</button>
+          <button type="button" class="btn btn-primary" id="nextFromStep1ToPackage">Avanti</button>
+        </div>
+      </section>
+
+      <!-- Step 2 -->
+      <section class="section step" id="step2">
+        <h2>Scegli l'orario della festa</h2>
+        <!-- Celebrant fields removed from here -->
+        <label>Data Festa</label>
+        <input type="date" id="data">
+
+        <h3 class="subtitle">Scegli Orario Inizio</h3>
+        <div class="time-options">
+          <label class="time-card" data-day-type="weekday">
+            <input type="radio" name="fascia_oraria" value="17:00" checked>
+            <div class="card-content">
+              <span class="time-label">17:00</span>
+              <span class="time-sub">Min 15 Persone</span>
+            </div>
+          </label>
+          <label class="time-card" data-day-type="weekday">
+            <input type="radio" name="fascia_oraria" value="18:00">
+            <div class="card-content">
+              <span class="time-label">18:00</span>
+              <span class="time-sub">Min 12 Persone</span>
+            </div>
+          </label>
+          <label class="time-card" data-day-type="weekday">
+            <input type="radio" name="fascia_oraria" value="19:00">
+            <div class="card-content">
+              <span class="time-label">19:00</span>
+              <span class="time-sub">Min 10 Persone</span>
+            </div>
+          </label>
+          <label class="time-card" data-day-type="sunday" style="display:none;">
+            <input type="radio" name="fascia_oraria" value="19:30">
+            <div class="card-content">
+              <span class="time-label">19:30</span>
+              <span class="time-sub">Solo Domenica</span>
+            </div>
+          </label>
+        </div>
+
+        <label>Numero Partecipanti</label>
+        <input type="number" id="partecipanti" class="input-large" min="12" value="15">
+
+        <div id="availability-msg" style="text-align: center; margin-top: 1rem; font-weight: bold; min-height: 1.5rem;">
+        </div>
+
+        <div class="buttons-row">
+          <button type="button" class="btn" id="backFromStep2ToWelcome">Indietro</button>
+          <button type="button" class="btn btn-primary" id="nextFromStep2ToStep1">Avanti</button>
+        </div>
+      </section>
+
+      <section class="section step" id="step_package" style="display:none;">
+        <h2>Scegli il Tuo Menu</h2>
+        <div class="package-grid">
+          <label class="package-card">
+            <input type="radio" name="pacchetto" value="Basic" checked>
+            <div class="card-content">
+              <span class="pkg-title">Basic</span>
+              <span class="pkg-desc">1 Trancio Margherita + Bibita + Torta</span>
+              <span class="pkg-price">10,00 € / persona</span>
+            </div>
+          </label>
+          <label class="package-card">
+            <input type="radio" name="pacchetto" value="Smart">
+            <div class="card-content">
+              <span class="pkg-title">Smart</span>
+              <span class="pkg-desc">2 Tranci Margherita + Bibita + Torta</span>
+              <span class="pkg-price">12,50 € / persona</span>
+            </div>
+          </label>
+          <label class="package-card">
+            <input type="radio" name="pacchetto" value="Plus">
+            <div class="card-content">
+              <span class="pkg-title">Plus</span>
+              <span class="pkg-desc">1 Trancio Focaccia Cotto/Mozz. + Bibita + Torta</span>
+              <span class="pkg-price">12,50 € / persona</span>
+            </div>
+          </label>
+          <label class="package-card">
+            <input type="radio" name="pacchetto" value="Prime">
+            <div class="card-content">
+              <span class="pkg-title">Prime</span>
+              <span class="pkg-desc">1 Pizza + 1 Focaccia + Bibita + Torta</span>
+              <span class="pkg-price">15,50 € / persona</span>
+            </div>
+          </label>
+          <label class="package-card">
+            <input type="radio" name="pacchetto" value="Ultra">
+            <div class="card-content">
+              <span class="pkg-title">Ultra</span>
+              <span class="pkg-desc">Pizza + 1 Focaccia + 1 Trancio + Bibita + Torta</span>
+              <span class="pkg-price">18,50 € / persona</span>
+            </div>
+          </label>
+        </div>
+
+        <!-- Patatine Add-on (styled like package cards) -->
+        <div style="margin-top: 1.5rem;">
+          <label class="package-card">
+            <input type="checkbox" id="patatine" value="yes">
+            <div class="card-content" style="flex-direction: row; align-items: center; gap: 1rem;">
+              <span style="font-size: 1.5rem;">🍟</span>
+              <div style="flex: 1;">
+                <span class="pkg-title" style="font-size: 1.1rem;">Aggiungi Patatine Fritte</span>
+              </div>
+              <span class="pkg-price">+ 2,50 € / persona</span>
+            </div>
+          </label>
+        </div>
+
+        <!-- Allergy/Intolerance Declaration Section -->
+        <div
+          style="margin-top: 2rem; background: rgba(255, 193, 7, 0.1); border: 2px solid #ffc107; border-radius: 8px; padding: 1.5rem;">
+          <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+            <input type="checkbox" id="allergy_declaration" required
+              style="width: 22px; height: 22px; margin-top: 2px; flex-shrink: 0; cursor: pointer; accent-color: #ffc107;">
+            <span style="font-size: 0.95rem; font-weight: 500; line-height: 1.5; color: #fff;">
+              ⚠️ È obbligatorio comunicare la presenza di intolleranze, allergie o altra forma di problematica legata al
+              cibo o alle bevande.
+              <strong style="display: block; margin-top: 0.5rem; color: #ffc107;">Confermo di aver letto e di impegnarmi
+                a comunicare eventuali allergie/intolleranze.</strong>
+            </span>
+          </label>
+        </div>
+
+        <div class="buttons-row">
+          <button type="button" class="btn" id="backFromPackageToStep1">Indietro</button>
+          <button type="button" class="btn btn-primary" id="nextToStepCakePage">Avanti</button>
+        </div>
+      </section>
+
+      <!-- Step 3 -->
+      <section class="section step" id="step3" style="display:none;">
+        <h2 style="margin-bottom: 0.2rem;">Scegli Durata</h2>
+        <p style="text-align: center; font-weight: normal; font-size: 0.9rem; margin-bottom: 1.5rem; color: #ccc;">
+          Massimo 6 giocatori per pista</p>
+
+        <div class="duration-options">
+          <label class="duration-card">
+            <input type="radio" name="durata" value="1h">
+            <div class="card-content">
+              <span class="duration-label">1 Ora</span>
+              <span class="price-label">34€ / Pista</span>
+            </div>
+          </label>
+          <label class="duration-card">
+            <input type="radio" name="durata" value="1.5h" checked>
+            <div class="card-content">
+              <span class="duration-label">1.5 Ore</span>
+              <span class="price-label">50€ / Pista</span>
+            </div>
+          </label>
+          <label class="duration-card">
+            <input type="radio" name="durata" value="2h">
+            <div class="card-content">
+              <span class="duration-label">2 Ore</span>
+              <span class="price-label">65€ / Pista</span>
+            </div>
+          </label>
+          <label class="duration-card">
+            <input type="radio" name="durata" value="2.5h">
+            <div class="card-content">
+              <span class="duration-label">2.5 Ore</span>
+              <span class="price-label">77€ / Pista</span>
+            </div>
+          </label>
+        </div>
+
+        <div class="buttons-row">
+          <button type="button" class="btn" id="backToStepCakePage">Indietro</button>
+          <button type="button" class="btn btn-primary" id="nextToStep4">Riepilogo</button>
+        </div>
+      </section>
+
+      <!-- Step 4 -->
+      <section class="section step" id="step4" style="display:none;">
+        <h2>Ecco il riepilogo delle tue scelte</h2>
+        <div class="ticket-container">
+          <div class="ticket">
+            <div class="ticket-header">
+              <span class="ticket-event" id="ticket-header-event">Festa di Compleanno</span>
+            </div>
+            <div class="ticket-body">
+              <div class="ticket-row">
+                <div class="ticket-item">
+                  <span class="ticket-label">FESTEGGIATO</span>
+                  <span class="ticket-value" id="ticket-name">-</span>
+                </div>
+                <div class="ticket-item">
+                  <span class="ticket-label">DATA</span>
+                  <span class="ticket-value" id="ticket-date">-</span>
+                </div>
+              </div>
+              <div class="ticket-row">
+                <div class="ticket-item">
+                  <span class="ticket-label">ORA</span>
+                  <span class="ticket-value" id="ticket-time">-</span>
+                </div>
+                <div class="ticket-item">
+                  <span class="ticket-label">PISTE</span>
+                  <span class="ticket-value" id="ticket-lanes">-</span>
+                </div>
+              </div>
+              <div class="ticket-row">
+                <div class="ticket-item">
+                  <span class="ticket-label">INVITATI</span>
+                  <span class="ticket-value" id="ticket-participants">-</span>
+                </div>
+                <div class="ticket-item">
+                  <span class="ticket-label">DURATA DI GIOCO</span>
+                  <span class="ticket-value" id="ticket-duration">-</span>
+                </div>
+              </div>
+              <div class="ticket-row">
+                <div class="ticket-item">
+                  <span class="ticket-label">MENU SCELTO</span>
+                  <span class="ticket-value" id="ticket-menu" style="font-size: 0.9rem;">-</span>
+                </div>
+                <div class="ticket-item">
+                  <span class="ticket-label">TORTA SCELTA</span>
+                  <span class="ticket-value" id="ticket-cake" style="font-size: 0.9rem;">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="finalCostDisplay"
+          style="text-align:center; font-size:1.5rem; margin: 1rem; color: #4caf50; font-weight:bold;">
+          Totale: <span id="totalSpan">0</span> €
+        </div>
+
+        <div class="buttons-row">
+          <button type="button" class="btn" id="backToStep3">Indietro</button>
+          <button type="button" class="btn btn-primary" id="confirmBooking">Conferma Prenotazione</button>
+        </div>
+      </section>
+
+      <!-- Step Success -->
+      <section class="section step" id="step_success" style="display:none; text-align:center;">
+        <div class="success-icon" style="font-size: 5rem; margin-bottom: 1rem;">🎉</div>
+        <h2 style="color: #4caf50;">Prenotazione Confermata!</h2>
+        <p style="font-size: 1.2rem; margin-bottom: 2rem;">
+          Abbiamo ricevuto la tua richiesta.<br>
+          L'evento è stato aggiunto al nostro calendario e riceverai a breve un'email di conferma.
+        </p>
+
+        <div class="invitation-box"
+          style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 20px; border: 2px dashed #25D366; margin-bottom: 2rem;">
+          <h2 style="color: #25D366; margin-bottom: 1rem;">Il tuo Invito Digitale 🎫</h2>
+          <p style="margin-bottom: 1.5rem;">Vuoi ricevere su WhatsApp l'invito pronto da inoltrare agli altri genitori?
+          </p>
+
+          <div class="buttons-row">
+            <button type="button" class="btn btn-primary" id="sendInviteWa"
+              style="background-color: #25D366; border-color: #25D366;">
+              Sì, Invia su WhatsApp
+            </button>
+            <button type="button" class="btn" id="skipInviteWa">
+              No, Grazie
+            </button>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <!-- Custom Alert Modal -->
+  <div id="customAlert" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <h3 id="alertTitle">Bowling Valdera</h3>
+      <p id="alertMessage"></p>
+      <button type="button" class="btn btn-primary" onclick="closeCustomAlert()">OK</button>
+    </div>
+  </div>
+
+  <script src="script.js?v=5.0"></script>
+</body>
+
+</html>
