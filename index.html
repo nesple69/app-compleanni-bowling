@@ -116,7 +116,7 @@
         </div>
 
         <h2 style="margin-top: 2rem;">Cosa vuoi scrivere sulla tua torta?</h2>
-        <input type="text" id="scritta_torta" class="input-large">
+        <input type="text" id="scritta_torta" class="input-large" required>
 
         <h2 style="margin-top: 2rem;">Vuoi una foto sulla torta?</h2>
         <label class="package-card"
@@ -141,20 +141,20 @@
       <section class="section step" id="step1" style="display:none;">
         <h2>Dati Contatto e Festeggiato</h2>
         <label>Nome Genitore</label>
-        <input type="text" id="nome">
+        <input type="text" id="nome" required>
         <label>Cognome Genitore</label>
-        <input type="text" id="cognome">
+        <input type="text" id="cognome" required>
         <label>Telefono</label>
-        <input type="tel" id="telefono">
+        <input type="tel" id="telefono" required>
 
         <!-- Moved Fields -->
         <label>Nome Festeggiato</label>
-        <input type="text" id="festeggiato">
+        <input type="text" id="festeggiato" required>
         <label>Età Festeggiato</label>
-        <input type="number" id="anni_festeggiato">
+        <input type="number" id="anni_festeggiato" required>
 
         <label>Email</label>
-        <input type="email" id="email">
+        <input type="email" id="email" required>
 
         <!-- GDPR Section -->
         <div class="gdpr-section">
@@ -162,7 +162,7 @@
 
           <!-- Mandatory: Booking Management -->
           <label class="gdpr-label gdpr-required">
-            <input type="checkbox" id="gdpr_consent">
+            <input type="checkbox" id="gdpr_consent" required>
             <span class="gdpr-text">
               <strong>Accetto il trattamento dei miei dati personali</strong> ai sensi del GDPR (Regolamento UE
               2016/679)
@@ -195,7 +195,7 @@
         <h2>Scegli l'orario della festa</h2>
         <!-- Celebrant fields removed from here -->
         <label>Data Festa</label>
-        <input type="date" id="data">
+        <input type="date" id="data" required>
 
         <h3 class="subtitle">Scegli Orario Inizio</h3>
         <div class="time-options">
