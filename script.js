@@ -659,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
       allergie_dichiarate: document.getElementById('allergy_declaration').checked ? 'Confermato' : 'No',
       gdpr: document.getElementById('gdpr_consent').checked ? 'Accettato' : 'No',
       marketing: document.getElementById('marketing_consent').checked ? 'Sì' : 'No',
-      totale: parseFloat(document.getElementById('totalSpan').textContent.replace('€', '').replace(',', '.'))
+      totale: parseFloat(document.getElementById('totalSpan').textContent.replace(/[€\s]/g, '').replace(',', '.'))
     };
 
     const scriptUrl = 'https://script.google.com/macros/s/AKfycbxX8Q62YfrjpCc38lDM3478-PEGk-iiG6080RLb5vnt3cYFWIDAq1D4suMoL_RKObkmLw/exec';
