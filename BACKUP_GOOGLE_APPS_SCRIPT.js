@@ -9,7 +9,7 @@
  * Email mittente: info@bowlingvaldera.it
  */
 
-const SHEET_NAME = 'Compleanni';
+const SHEET_NAME = 'dati_compleanno';
 const CALENDAR_ID = 'federicacircelli25@gmail.com';
 
 // --- GESTIONE VERIFICA DISPONIBILITÀ (GET) ---
