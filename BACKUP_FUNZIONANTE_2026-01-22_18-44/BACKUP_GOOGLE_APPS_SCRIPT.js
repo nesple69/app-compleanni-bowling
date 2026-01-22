@@ -1,18 +1,16 @@
 /**
  * GOOGLE APPS SCRIPT - Bowling Valdera
- * VERSIONE RIPRISTINATA E AGGIORNATA
+ * Data: 15 Gennaio 2026
  * 
- * IMPORTANTE: 
- * - Questo script deve essere COLLEGATO DIRETTAMENTE al foglio Google Sheets
- * - Vai su Extensions → Apps Script dal foglio Google Sheets
- * - NON usare uno script standalone
+ * DEPLOYMENT URL: https://script.google.com/macros/s/AKfycbzBUSpATfJw5nK7Ja-z8tY3K5qocNLTDm3yXptoaZcT3Ywx7H4LtfkzyVb7PAPeB7mM/exec
  * 
- * Foglio: "compleanni"
- * Calendar ID: federicacircelli25@gmail.com (o primary)
+ * IMPORTANTE: Questo script è collegato al foglio Google Sheets "compleanni"
+ * Calendar ID: federicacircelli25@gmail.com
+ * Email mittente: info@bowlingvaldera.it
  */
 
-const SHEET_NAME = 'compleanni';
-const CALENDAR_ID = 'federicacircelli25@gmail.com'; // o 'primary'
+const SHEET_NAME = 'dati_compleanno';
+const CALENDAR_ID = 'federicacircelli25@gmail.com';
 
 // --- GESTIONE VERIFICA DISPONIBILITÀ (GET) ---
 function doGet(e) {
@@ -37,78 +35,57 @@ function doGet(e) {
 // --- GESTIONE SALVATAGGIO PRENOTAZIONE (POST) ---
 function doPost(e) {
   try {
-    Logger.log('doPost chiamato');
-    Logger.log('Dati ricevuti: ' + e.postData.contents);
-    
     const data = JSON.parse(e.postData.contents);
-    
-    // USA IL FOGLIO ATTIVO invece di cercare per ID
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(SHEET_NAME);
-    
-    if (!sheet) {
-      throw new Error('Foglio "' + SHEET_NAME + '" non trovato');
-    }
+    const sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
 
-    Logger.log('Foglio trovato: ' + sheet.getName());
-
-    // Aggiungi riga al foglio
+    // Aggiungi riga al foglio (ordine esatto delle colonne)
     sheet.appendRow([
-      new Date(),
-      data.festeggiato || '',
-      data.anni || '',
-      data.cliente || '',
-      data.telefono || '',
-      data.email || '',
-      data.data_festa || '',
-      data.ora || '',
-      data.partecipanti || '',
-      data.menu || '',
-      data.patatine || 'No',
-      data.torta || '',
-      data.scritta_torta || '',
-      data.foto_torta || 'No',
-      data.durata || '',
-      data.altre_richieste || '',
-      data.allergie_dichiarate || 'No',
-      data.gdpr || 'No',
-      data.marketing || 'No',
-      data.totale || '0'
+      new Date(),              // Timestamp
+      data.festeggiato,        // Festeggiato
+      data.anni,               // Anni
+      data.cliente,            // Cliente
+      data.telefono,           // Telefono
+      data.email,              // Email
+      data.data_festa,         // Data Festa
+      data.ora,                // Ora
+      data.partecipanti,       // Persone
+      data.menu,               // Menu
+      data.patatine,           // Patatine
+      data.torta,              // Torta
+      data.scritta_torta,      // Scritta
+      data.altre_richieste,    // Note
+      data.durata,             // Durata
+      data.totale,             // Totale
+      data.allergie_dichiarate,// Allergie Dichiarate
+      data.gdpr,               // GDPR
+      data.marketing,          // Marketing
+      data.foto_torta          // Foto Torta
     ]);
 
-    Logger.log('Riga aggiunta con successo');
-
-    // Crea evento calendario
     createCalendarEvent(data);
-    Logger.log('Evento calendario creato');
-
-    // Invia email
     sendConfirmationEmail(data);
-    Logger.log('Email inviata');
 
-    return ContentService.createTextOutput(JSON.stringify({
-      success: true,
-      message: 'Prenotazione salvata'
-    })).setMimeType(ContentService.MimeType.JSON);
-    
+    // Formatta la colonna Totale (colonna 16) con il simbolo €
+    const lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow, 16).setNumberFormat('€#,##0.00');
+
+    return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
   } catch (err) {
-    Logger.log('Errore: ' + err.message);
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false,
-      error: err.message
-    })).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput("Error: " + err.message).setMimeType(ContentService.MimeType.TEXT);
   }
 }
 
 // --- FUNZIONALITÀ INTERNE ---
 function checkCalendarAvailability(dateStr, timeStr) {
   const start = new Date(dateStr + 'T' + timeStr + ':00');
+  // Consideriamo una finestra di 2 ore per la disponibilità
   const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
 
   const calendar = CalendarApp.getCalendarById(CALENDAR_ID);
   const events = calendar.getEvents(start, end);
 
-  // Controllo chiusure o ferie
+  // Controllo chiusure o ferie (eventi di tutto il giorno)
   const dayStart = new Date(dateStr + 'T00:00:00');
   const dayEnd = new Date(dateStr + 'T23:59:59');
   const allDayEvents = calendar.getEvents(dayStart, dayEnd);
@@ -129,25 +106,18 @@ function createCalendarEvent(data) {
   const isoDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
 
   const start = new Date(isoDate + 'T' + data.ora + ':00');
-  
-  // Calcola durata
-  let durationInHours = 1.5; // default
-  if (data.durata === '1h') durationInHours = 1;
-  else if (data.durata === '1.5h') durationInHours = 1.5;
-  else if (data.durata === '2h') durationInHours = 2;
-  else if (data.durata === '2.5h') durationInHours = 2.5;
-  
+  const durationInHours = parseFloat(data.durata) || 2;
   const end = new Date(start.getTime() + durationInHours * 60 * 60 * 1000);
 
-  const title = "🎉 FESTA " + data.festeggiato.toUpperCase() + " (" + data.partecipanti + " pers.)";
-  const desc = "Cliente: " + data.cliente + "\nTel: " + data.telefono + "\nEmail: " + data.email + "\nMenu: " + data.menu + "\nTorta: " + data.torta;
+  const title = "FESTA " + data.festeggiato.toUpperCase() + " (" + data.partecipanti + " pers.)";
+  const desc = "Cliente: " + data.cliente + "\nTel: " + data.telefono + "\nMenu: " + data.menu + "\nTorta: " + data.torta;
 
   CalendarApp.getCalendarById(CALENDAR_ID).createEvent(title, start, end, { description: desc });
 }
 
 function sendConfirmationEmail(data) {
   const recipient = data.email || "info@bowlingvaldera.it";
-  const subject = "✅ Conferma Prenotazione Compleanno - " + data.festeggiato;
+  const subject = "Conferma Prenotazione Compleanno - " + data.festeggiato;
 
   const logoUrl = "https://static.wixstatic.com/media/f8ebda_855a92753e0446558b7d1137bc653197~mv2.png";
 
