@@ -39,31 +39,36 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
 
-    // Aggiungi riga al foglio
+    // Aggiungi riga al foglio (ordine esatto delle colonne)
     sheet.appendRow([
-      new Date(),
-      data.festeggiato,
-      data.anni,
-      data.cliente,
-      data.telefono,
-      data.email,
-      data.data_festa,
-      data.ora,
-      data.partecipanti,
-      data.menu,
-      data.patatine,
-      data.torta,
-      data.scritta_torta,
-      data.altre_richieste,
-      data.durata,
-      data.totale,
-      data.gdpr,
-      data.marketing,
-      data.foto_torta
+      new Date(),              // Timestamp
+      data.festeggiato,        // Festeggiato
+      data.anni,               // Anni
+      data.cliente,            // Cliente
+      data.telefono,           // Telefono
+      data.email,              // Email
+      data.data_festa,         // Data Festa
+      data.ora,                // Ora
+      data.partecipanti,       // Persone
+      data.menu,               // Menu
+      data.patatine,           // Patatine
+      data.torta,              // Torta
+      data.scritta_torta,      // Scritta
+      data.altre_richieste,    // Note
+      data.durata,             // Durata
+      data.totale,             // Totale
+      data.allergie_dichiarate,// Allergie Dichiarate
+      data.gdpr,               // GDPR
+      data.marketing,          // Marketing
+      data.foto_torta          // Foto Torta
     ]);
 
     createCalendarEvent(data);
     sendConfirmationEmail(data);
+
+    // Formatta la colonna Totale (colonna 16) con il simbolo €
+    const lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow, 16).setNumberFormat('€#,##0.00');
 
     return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
   } catch (err) {
