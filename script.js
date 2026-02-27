@@ -95,9 +95,7 @@ document.getElementById('nextFromStep1ToPackage').addEventListener('click', () =
   const anni = document.getElementById('anni_festeggiato');
   const email = document.getElementById('email');
 
-  // VALIDAZIONI TEMPORANEAMENTE DISATTIVATE
-  /* 
-  // Basic "Empty" check with descriptive alerts
+  // 1. Basic Field Validation
   if (!nome.value.trim()) {
     showCustomAlert("Per favore, inserisci il tuo nome.");
     nome.classList.add('shake');
@@ -123,7 +121,7 @@ document.getElementById('nextFromStep1ToPackage').addEventListener('click', () =
     return;
   }
   if (!anni.value.trim()) {
-    showCustomAlert("Per favore, inserisci quanti anni compie il festeggiato.");
+    showCustomAlert("Per favore, inserisci l'età del festeggiato.");
     anni.classList.add('shake');
     setTimeout(() => anni.classList.remove('shake'), 400);
     return;
@@ -135,7 +133,7 @@ document.getElementById('nextFromStep1ToPackage').addEventListener('click', () =
     return;
   }
 
-  // Format checks
+  // 2. Format Checks
   const cleanTel = telefono.value.replace(/\D/g, '');
   if (cleanTel.length < 9) {
     showCustomAlert("Il numero di telefono inserito non sembra corretto (minimo 9 cifre).");
@@ -152,14 +150,18 @@ document.getElementById('nextFromStep1ToPackage').addEventListener('click', () =
     return;
   }
 
-  const gdpr = document.getElementById('gdpr_consent');
-  if (!gdpr.checked) {
-    showCustomAlert("Per favore, accetta il trattamento dei dati personali (GDPR) per proseguire.");
-    gdpr.classList.add('shake');
-    setTimeout(() => gdpr.classList.remove('shake'), 400);
+  // 3. Mandatory Consent Checks
+  const allergy = document.getElementById('allergy_declaration');
+  if (allergy && !allergy.checked) {
+    showCustomAlert("Per favore, conferma di aver comunicato eventuali allergie.");
     return;
   }
-  */
+
+  const gdpr = document.getElementById('gdpr_consent');
+  if (gdpr && !gdpr.checked) {
+    showCustomAlert("Per favore, accetta il trattamento dei dati personali (GDPR) per proseguire.");
+    return;
+  }
 
   showStep('step_package');
   updateRealTimeCost();
@@ -172,8 +174,6 @@ document.getElementById('nextFromStep2ToStep1').addEventListener('click', () => 
   const part = document.getElementById('partecipanti');
   const msg = document.getElementById('availability-msg');
 
-  // VALIDAZIONI TEMPORANEAMENTE DISATTIVATE
-  /*
   let valid = true;
   if (!dataFesta.value) {
     showCustomAlert("Per favore, seleziona la data della festa.");
@@ -197,21 +197,24 @@ document.getElementById('nextFromStep2ToStep1').addEventListener('click', () => 
   let minRequired = 15; // default for 17:00
   if (selectedTime === '18:00') minRequired = 12;
   if (selectedTime === '19:00') minRequired = 10;
+  if (selectedTime === '19:30') minRequired = 15; // Sunday
 
   if (parseInt(part.value) < minRequired) {
-    showCustomAlert(`Per l'orario delle ${selectedTime} sono richiesti almeno ${minRequired} partecipanti.`);
+    showCustomAlert(`Per la fascia delle ${selectedTime} il numero minimo è ${minRequired} persone.`);
     part.classList.add('shake');
     setTimeout(() => part.classList.remove('shake'), 400);
     return;
   }
 
-  if (msg.dataset.available === 'false') {
-    showCustomAlert("L'orario selezionato non è più disponibile. Per favore, cambialo.");
-    msg.classList.add('shake');
-    setTimeout(() => msg.classList.remove('shake'), 400);
+  // Check Availability State
+  if (msg.dataset.available === "false") {
+    showCustomAlert("L'orario selezionato non è disponibile. Scegli un'altra data o fascia oraria.");
     return;
   }
-  */
+  if (msg.dataset.available === "loading") {
+    showCustomAlert("Stiamo ancora verificando la disponibilità. Attendi un momento.");
+    return;
+  }
 
   showStep('step1');
   updateRealTimeCost();
@@ -662,7 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
       totale: parseFloat(document.getElementById('totalSpan').textContent.replace(/[€\s]/g, '').replace(',', '.'))
     };
 
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbxX8Q62YfrjpCc38lDM3478-PEGk-iiG6080RLb5vnt3cYFWIDAq1D4suMoL_RKObkmLw/exec';
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbzBUSpATfJw5nK7Ja-z8tY3K5qocNLTDm3yXptoaZcT3Ywx7H4LtfkzyVb7PAPeB7mM/exec';
 
     try {
       // Usiamo 'text/plain' per evitare il preflight CORS che Apps Script non gestisce bene
