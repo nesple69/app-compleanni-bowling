@@ -151,11 +151,7 @@ document.getElementById('nextFromStep1ToPackage').addEventListener('click', () =
   }
 
   // 3. Mandatory Consent Checks
-  const allergy = document.getElementById('allergy_declaration');
-  if (allergy && !allergy.checked) {
-    showCustomAlert("Per favore, conferma di aver comunicato eventuali allergie.");
-    return;
-  }
+
 
   const gdpr = document.getElementById('gdpr_consent');
   if (gdpr && !gdpr.checked) {
