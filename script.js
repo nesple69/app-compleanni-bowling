@@ -466,7 +466,7 @@ async function checkAvailability() {
   }
 
   // 4. Calendar Check (Apps Script)
-  const scriptUrl = 'https://script.google.com/macros/s/AKfycbxX8Q62YfrjpCc38lDM3478-PEGk-iiG6080RLb5vnt3cYFWIDAq1D4suMoL_RKObkmLw/exec';
+  const scriptUrl = 'https://script.google.com/macros/s/AKfycbzYysHu5l6cCsuPgxZbBPdY9EdrzA0aqUdE4w0PZGSwHOlULlRykagiiqi3hcQPf4I7ZQ/exec';
 
   // Convert date to Italian format DD-MM-YYYY for the script
   const dateParts = dateStr.split('-');
@@ -661,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
       totale: parseFloat(document.getElementById('totalSpan').textContent.replace(/[€\s]/g, '').replace(',', '.'))
     };
 
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbxX8Q62YfrjpCc38lDM3478-PEGk-iiG6080RLb5vnt3cYFWIDAq1D4suMoL_RKObkmLw/exec';
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbzYysHu5l6cCsuPgxZbBPdY9EdrzA0aqUdE4w0PZGSwHOlULlRykagiiqi3hcQPf4I7ZQ/exec';
 
     try {
       // Usiamo 'text/plain' per evitare il preflight CORS che Apps Script non gestisce bene
