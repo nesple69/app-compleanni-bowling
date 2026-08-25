@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // CONFIGURAZIONE â€” Costanti globali
 // ============================================================
 
@@ -9,24 +9,62 @@ const API_TOKEN = 'BV2026-f8e3a7d2b9c4-k7p1';
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzoxNM77DBO4xRQBdz27XmvpFMdh8mQYzqsIbq4aVCKnZGgSkNPDESEadui1jHsLqJDHw/exec';
 
-const PRICE_PER_LANE = {
-  '1h': 34,
-  '1.5h': 50,
-  '2h': 65,
-  '2.5h': 77
+// Tariffe Bowling per pista
+// Lunedì - Giovedì: 30,00 € / ora
+const PRICE_PER_LANE_WEEKDAY = {
+  '1h': 30,
+  '1.5h': 45,
+  '2h': 60,
+  '2.5h': 75
 };
+
+// Venerdì, Sabato e Domenica: 35,00 € / ora
+const PRICE_PER_LANE_WEEKEND = {
+  '1h': 35,
+  '1.5h': 52.5,
+  '2h': 70,
+  '2.5h': 87.5
+};
+
 const MAX_PLAYERS_PER_LANE = 6;
 
 const MENUS = {
-  // NOTA: i prezzi qui devono essere sincronizzati con quelli mostrati nell'HTML.
+  // NOTA: i prezzi qui sono sincronizzati con quelli mostrati nell'HTML.
   'Basic': { name: 'Basic',  price: 10.0  },
   'Smart': { name: 'Smart',  price: 12.5  },
-  'Plus':  { name: 'Plus',   price: 12.5  },
-  'Prime': { name: 'Prime',  price: 15.5  },
+  'Plus':  { name: 'Plus',   price: 11.5  }, // 11,50 €
+  'Prime': { name: 'Prime',  price: 15.0  }, // 15,00 €
   'Ultra': { name: 'Ultra',  price: 18.5  }
 };
-const FRIES_PRICE      = 2.5;
+const FRIES_PRICE      = 2.0; // 2,00 €
 const CAKE_PHOTO_PRICE = 5.0;
+
+function getPricePerLaneMap() {
+  const dateStr = document.getElementById('data')?.value;
+  if (!dateStr) return PRICE_PER_LANE_WEEKDAY;
+
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const selectedDate = new Date(year, month - 1, day);
+  const dayOfWeek = selectedDate.getDay(); // 0=Dom, 5=Ven, 6=Sab
+
+  // Venerdì (5), Sabato (6), Domenica (0) -> Weekend (35€/h)
+  const isWeekend = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
+  return isWeekend ? PRICE_PER_LANE_WEEKEND : PRICE_PER_LANE_WEEKDAY;
+}
+
+function updateDurationLabels() {
+  const priceMap = getPricePerLaneMap();
+  
+  const el1h = document.getElementById('price-durata-1h');
+  const el15h = document.getElementById('price-durata-1-5h');
+  const el2h = document.getElementById('price-durata-2h');
+  const el25h = document.getElementById('price-durata-2-5h');
+
+  if (el1h) el1h.textContent = `${priceMap['1h']}€ / Pista`;
+  if (el15h) el15h.textContent = `${priceMap['1.5h'].toString().replace('.', ',')}€ / Pista`;
+  if (el2h) el2h.textContent = `${priceMap['2h']}€ / Pista`;
+  if (el25h) el25h.textContent = `${priceMap['2.5h'].toString().replace('.', ',')}€ / Pista`;
+}
 
 
 // ============================================================
@@ -78,8 +116,9 @@ function updateRealTimeCost() {
   const step4Visible  = document.getElementById('step4').style.display === 'block';
   const includeLanes  = step3Visible || step4Visible;
 
+  const pricePerLaneMap = getPricePerLaneMap();
   const lanes    = part > 0 ? Math.ceil(part / MAX_PLAYERS_PER_LANE) : 0;
-  const laneCost = includeLanes ? lanes * (PRICE_PER_LANE[duration] || 0) : 0;
+  const laneCost = includeLanes ? lanes * (pricePerLaneMap[duration] || 0) : 0;
 
   const menuPrice      = MENUS[selectedMenuKey] ? MENUS[selectedMenuKey].price : 0;
   const friesCost      = fries ? FRIES_PRICE : 0;
@@ -87,7 +126,7 @@ function updateRealTimeCost() {
   const totalFoodCost  = part * (menuPrice + friesCost);
   const total          = laneCost + totalFoodCost + photoCost;
 
-  document.querySelector('.cost-value').textContent = total.toFixed(2).replace('.', ',') + ' â‚¬';
+  document.querySelector('.cost-value').textContent = total.toFixed(2).replace('.', ',') + ' €';
 
   return { total: total.toFixed(2), lanes, duration, part, selectedMenuKey, fries, cakePhoto };
 }
@@ -416,10 +455,13 @@ function init() {
     }
 
     updateMinParticipants();
+    updateDurationLabels();
+    updateRealTimeCost();
     checkAvailability();
   });
 
   updateMinParticipants();
+  updateDurationLabels();
 
   // --- Pulsante start ---
   document.getElementById('startBookingBtn').addEventListener('click', startBooking);
