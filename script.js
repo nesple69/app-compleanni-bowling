@@ -1,10 +1,10 @@
 // ============================================================
-// CONFIGURAZIONE â€” Costanti globali
+// CONFIGURAZIONE — Costanti globali
 // ============================================================
 
 // Token di sicurezza per il backend.
 // IMPORTANTE: questo stesso valore deve essere impostato in Apps Script
-// come proprietÃ  "API_SECRET" (Impostazioni progetto â†’ ProprietÃ  dello script).
+// come proprietà "API_SECRET" (Impostazioni progetto → Proprietà dello script).
 const API_TOKEN = 'BV2026-f8e3a7d2b9c4-k7p1';
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzoxNM77DBO4xRQBdz27XmvpFMdh8mQYzqsIbq4aVCKnZGgSkNPDESEadui1jHsLqJDHw/exec';
@@ -178,7 +178,7 @@ function updateSummaryView() {
 
 
 // ============================================================
-// VERIFICA DISPONIBILITÃ€
+// VERIFICA DISPONIBILITÀ
 // ============================================================
 
 // AbortController a scope di modulo per cancellare richieste obsolete (fix race condition)
@@ -198,7 +198,7 @@ async function checkAvailability() {
   currentAvailabilityController = new AbortController();
   const controller = currentAvailabilityController;
 
-  msg.textContent          = 'â³ Verifica disponibilitÃ ...';
+  msg.textContent          = '⏳ Verifica disponibilità...';
   msg.style.color          = '#fff';
   msg.style.fontSize       = '1.5rem';
   msg.dataset.available    = 'loading';
@@ -216,12 +216,12 @@ async function checkAvailability() {
   const [hours, minutes] = time.split(':').map(Number);
   selectedDateTime.setHours(hours, minutes, 0, 0);
   if (selectedDateTime < now) {
-    showUnavailable('Non Ã¨ possibile prenotare una data/orario giÃ  passati. Seleziona una data e orario futuri.');
+    showUnavailable('Non è possibile prenotare una data/orario già passati. Seleziona una data e orario futuri.');
     return;
   }
 
   if (dayOfWeek === 3) {
-    showUnavailable('Spiacenti, il MercoledÃ¬ non accettiamo compleanni.');
+    showUnavailable('Spiacenti, il Mercoledì non accettiamo compleanni.');
     return;
   }
 
@@ -257,19 +257,19 @@ async function checkAvailability() {
     const result = await response.json();
 
     if (result.available) {
-      msg.textContent       = 'âœ… Orario Disponibile!';
+      msg.textContent       = '✅ Orario Disponibile!';
       msg.style.color       = '#fff';
       msg.dataset.available = 'true';
       nextBtn.disabled      = false;
     } else {
-      showUnavailable("Orario giÃ  prenotato. Scegli un'altra fascia o data.");
+      showUnavailable("Orario già prenotato. Scegli un'altra fascia o data.");
     }
   } catch (e) {
     clearTimeout(timeoutId);
     if (e.name === 'AbortError') return;
     console.error('Availability check failed', e);
     // Fix: errore di rete NON equivale a disponibile
-    msg.textContent       = 'âš ï¸ Servizio non raggiungibile. Riprova o contattaci al 0587 420120.';
+    msg.textContent       = '⚠️ Servizio non raggiungibile. Riprova o contattaci al 0587 420120.';
     msg.style.color       = 'orange';
     msg.dataset.available = 'error';
     nextBtn.disabled      = true;
@@ -277,7 +277,7 @@ async function checkAvailability() {
 
   function showUnavailable(text) {
     if (controller !== currentAvailabilityController) return;
-    msg.textContent       = 'âŒ ' + text;
+    msg.textContent       = '❌ ' + text;
     msg.style.color       = '#fff';
     msg.dataset.available = 'false';
     nextBtn.disabled      = true;
@@ -289,7 +289,7 @@ async function checkAvailability() {
 // SALVATAGGIO DATABASE
 // ============================================================
 
-// Fix: funzione a scope di modulo (non piÃ¹ intrappolata in closure DOMContentLoaded)
+// Fix: funzione a scope di modulo (non più intrappolata in closure DOMContentLoaded)
 async function saveToDatabase() {
   const nome     = document.getElementById('nome').value;
   const cognome  = document.getElementById('cognome').value;
@@ -311,20 +311,20 @@ async function saveToDatabase() {
     ora:                 document.querySelector('input[name="fascia_oraria"]:checked')?.value,
     partecipanti:        document.getElementById('partecipanti').value,
     menu:                document.querySelector('input[name="pacchetto"]:checked')?.value,
-    patatine:            document.getElementById('patatine').checked ? 'SÃ¬' : 'No',
+    patatine:            document.getElementById('patatine').checked ? 'Sì' : 'No',
     torta:               document.querySelector('input[name="torta"]:checked')?.value,
     scritta_torta:       document.getElementById('scritta_torta').value,
     altre_richieste:     document.getElementById('altre_richieste').value,
     durata:              selectedDuration,
-    foto_torta:          document.getElementById('foto_torta').checked ? 'SÃ¬' : 'No',
+    foto_torta:          document.getElementById('foto_torta').checked ? 'Sì' : 'No',
     allergie_dichiarate: document.getElementById('allergy_declaration').checked ? 'Confermato' : 'No',
     gdpr:                document.getElementById('gdpr_consent').checked ? 'Accettato' : 'No',
-    marketing:           document.getElementById('marketing_consent').checked ? 'SÃ¬' : 'No',
-    totale:              parseFloat(document.getElementById('totalSpan').textContent.replace(/[â‚¬\s]/g, '').replace(',', '.'))
+    marketing:           document.getElementById('marketing_consent').checked ? 'Sì' : 'No',
+    totale:              parseFloat(document.getElementById('totalSpan').textContent.replace(/[€\s]/g, '').replace(',', '.'))
   };
 
   try {
-    // Fix: rimosso mode:'no-cors' â€” la risposta Ã¨ ora leggibile e verificabile.
+    // Fix: rimosso mode:'no-cors' — la risposta è ora leggibile e verificabile.
     // Content-Type: text/plain evita il preflight CORS su Apps Script.
     const response = await fetch(SCRIPT_URL, {
       method: 'POST',
@@ -336,7 +336,7 @@ async function saveToDatabase() {
 
     const text = await response.text();
 
-    // CompatibilitÃ  con entrambi i formati:
+    // Compatibilità con entrambi i formati:
     // - Vecchio formato (pre-aggiornamento Apps Script): stringa "Success"
     // - Nuovo formato (post-aggiornamento): JSON { success: true }
     if (text.startsWith('{')) {
@@ -396,7 +396,7 @@ function closeCustomAlert() {
 
 
 // ============================================================
-// INIZIALIZZAZIONE â€” Un unico punto di ingresso
+// INIZIALIZZAZIONE — Un unico punto di ingresso
 // ============================================================
 
 function init() {
@@ -484,7 +484,7 @@ function init() {
 
     const partNum = parseInt(part.value, 10);
     if (isNaN(partNum) || partNum < 1) {
-      showCustomAlert('Il numero di partecipanti non Ã¨ valido.');
+      showCustomAlert('Il numero di partecipanti non è valido.');
       part.classList.add('shake');
       setTimeout(() => part.classList.remove('shake'), 400);
       return;
@@ -499,22 +499,22 @@ function init() {
     if (selectedTime === '19:30') minRequired = 15;
 
     if (partNum < minRequired) {
-      showCustomAlert(`Per la fascia delle ${selectedTime} il numero minimo Ã¨ ${minRequired} persone.`);
+      showCustomAlert(`Per la fascia delle ${selectedTime} il numero minimo è ${minRequired} persone.`);
       part.classList.add('shake');
       setTimeout(() => part.classList.remove('shake'), 400);
       return;
     }
 
     if (msg.dataset.available === 'false') {
-      showCustomAlert("L'orario selezionato non Ã¨ disponibile. Scegli un'altra data o fascia oraria.");
+      showCustomAlert("L'orario selezionato non è disponibile. Scegli un'altra data o fascia oraria.");
       return;
     }
     if (msg.dataset.available === 'loading') {
-      showCustomAlert('Stiamo ancora verificando la disponibilitÃ . Attendi un momento.');
+      showCustomAlert('Stiamo ancora verificando la disponibilità. Attendi un momento.');
       return;
     }
     if (msg.dataset.available === 'error') {
-      showCustomAlert('Impossibile verificare la disponibilitÃ . Riprova piÃ¹ tardi o contattaci al 0587 420120.');
+      showCustomAlert('Impossibile verificare la disponibilità. Riprova più tardi o contattaci al 0587 420120.');
       return;
     }
 
@@ -535,7 +535,7 @@ function init() {
       [cognome,     'Per favore, inserisci il tuo cognome.'],
       [telefono,    'Per favore, inserisci un numero di telefono.'],
       [festeggiato, 'Per favore, inserisci il nome del festeggiato.'],
-      [anni,        "Per favore, inserisci l'etÃ  del festeggiato."],
+      [anni,        "Per favore, inserisci l'età del festeggiato."],
       [email,       'Per favore, inserisci un indirizzo email.'],
     ];
 
@@ -558,7 +558,7 @@ function init() {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.value.trim())) {
-      showCustomAlert("L'indirizzo email inserito non Ã¨ nel formato corretto.");
+      showCustomAlert("L'indirizzo email inserito non è nel formato corretto.");
       email.classList.add('shake');
       setTimeout(() => email.classList.remove('shake'), 400);
       return;
@@ -658,7 +658,7 @@ function init() {
         showStep('step_success');
         document.getElementById('floatingCost').classList.add('hidden');
       } else {
-        showCustomAlert('Ops! Qualcosa Ã¨ andato storto nel salvataggio. Riprova tra un momento.');
+        showCustomAlert('Ops! Qualcosa è andato storto nel salvataggio. Riprova tra un momento.');
         confirmBtn.disabled    = false;
         confirmBtn.textContent = 'Conferma Prenotazione';
       }
@@ -677,14 +677,14 @@ function init() {
       const time        = document.getElementById('ticket-time').textContent;
 
       const inviteMsg =
-        `*INVITO ALLA FESTA DI ${festeggiato.toUpperCase()}!* ðŸŽ³ðŸŽ‰\n\n` +
+        `*INVITO ALLA FESTA DI ${festeggiato.toUpperCase()}!* 🎳🎉\n\n` +
         `Ciao! Sei invitato alla mia festa di compleanno al *Bowling Valdera*!\n\n` +
-        `ðŸ“… *Quando:* ${date}\n` +
-        `ðŸ•” *Orario:* ${time}\n` +
-        `ðŸ“ *Dove:* Via ToscoRomagnola, 127, Fornacette (PI)\n\n` +
-        `ðŸ“ž *Info locale:* 0587 420120\n` +
-        `ðŸŒ *Sito:* www.bowlingvaldera.com\n\n` +
-        `Ti aspetto per strike, musica e tanto divertimento! ðŸ•ðŸŽ‚ðŸŽ³`;
+        `📅 *Quando:* ${date}\n` +
+        `🕔 *Orario:* ${time}\n` +
+        `📍 *Dove:* Via ToscoRomagnola, 127, Fornacette (PI)\n\n` +
+        `📞 *Info locale:* 0587 420120\n` +
+        `🌐 *Sito:* www.bowlingvaldera.com\n\n` +
+        `Ti aspetto per strike, musica e tanto divertimento! 🍕🎂🎳`;
 
       // Fix: normalizzazione numero telefono robusta
       const cleanTel = clientTel.replace(/\D/g, '');
@@ -717,7 +717,6 @@ function init() {
 }
 
 // ============================================================
-// AVVIO APPLICAZIONE â€” Un unico DOMContentLoaded
+// AVVIO APPLICAZIONE — Un unico DOMContentLoaded
 // ============================================================
 document.addEventListener('DOMContentLoaded', init);
-
