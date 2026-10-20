@@ -90,6 +90,26 @@ function calculateAuthoritativeTotal(data) {
 // --- VERIFICA DISPONIBILITÀ (GET) ---
 function doGet(e) {
   try {
+    const action = e.parameter.action;
+
+    // Richiesta disponibilità dell'intero mese (per il calendario interattivo)
+    if (action === 'month_availability') {
+      const year          = parseInt(e.parameter.year, 10);
+      const month         = parseInt(e.parameter.month, 10); // 1-12
+      const durationHours = parseFloat(e.parameter.duration) || 1.5;
+
+      if (!year || !month) {
+        return ContentService
+          .createTextOutput(JSON.stringify({ success: false, error: 'Anno o mese mancanti' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const monthData = getMonthAvailability(year, month, durationHours);
+      return ContentService
+        .createTextOutput(JSON.stringify({ success: true, year: year, month: month, days: monthData }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     const dateStr       = e.parameter.date;
     const timeStr       = e.parameter.time;
     const durationHours = parseFloat(e.parameter.duration) || 1.5;
@@ -113,6 +133,120 @@ function doGet(e) {
       .createTextOutput(JSON.stringify({ available: false, error: err.message }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+// --- RECUPERO DISPONIBILITÀ MENSILE IN UN'UNICA CHIAMATA ---
+function getMonthAvailability(year, month, durationHours) {
+  const props = getProps();
+  if (!props.calendarId) return {};
+
+  const calendar = CalendarApp.getCalendarById(props.calendarId) || CalendarApp.getDefaultCalendar();
+  if (!calendar) return {};
+
+  const firstDay = new Date(year, month - 1, 1, 0, 0, 0);
+  const numDays  = new Date(year, month, 0).getDate();
+  const lastDay  = new Date(year, month - 1, numDays, 23, 59, 59);
+
+  // Una sola lettura da Google Calendar per tutto il mese
+  const allEvents = calendar.getEvents(firstDay, lastDay);
+
+  const holidays = ['1-1', '6-1', '25-4', '1-5', '2-6', '15-8', '1-11', '8-12', '25-12', '26-12'];
+  const now = new Date();
+  const pad = function(n) { return (n < 10 ? '0' : '') + n; };
+  const todayDateStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+
+  const bufferMs = 30 * 60 * 1000;
+  const daysMap  = {};
+
+  for (let day = 1; day <= numDays; day++) {
+    const dStr       = year + '-' + pad(month) + '-' + pad(day);
+    const dayDate    = new Date(year, month - 1, day, 12, 0, 0);
+    const dayOfWeek  = dayDate.getDay(); // 0=Dom, 3=Mer
+
+    // Giorni nel passato
+    if (dStr < todayDateStr) {
+      daysMap[dStr] = { status: 'past', slots: [], label: 'Passato' };
+      continue;
+    }
+
+    // Chiusura settimanale fissa (Mercoledì)
+    if (dayOfWeek === 3) {
+      daysMap[dStr] = { status: 'closed', slots: [], label: 'Chiuso (Mercoledì)' };
+      continue;
+    }
+
+    // Giorni festivi chiusi
+    if (holidays.indexOf(day + '-' + month) !== -1) {
+      daysMap[dStr] = { status: 'closed', slots: [], label: 'Festivo' };
+      continue;
+    }
+
+    // Controllo chiusure o ferie giornaliere da calendario
+    const dayStart = new Date(year, month - 1, day, 0, 0, 0);
+    const dayEnd   = new Date(year, month - 1, day, 23, 59, 59);
+    let isClosedAllDay = false;
+
+    for (let i = 0; i < allEvents.length; i++) {
+      const ev = allEvents[i];
+      if (ev.isAllDayEvent() && ev.getStartTime() <= dayEnd && ev.getEndTime() >= dayStart) {
+        const title = (ev.getTitle() || '').toUpperCase();
+        if (title.indexOf('CHIUSO') !== -1 || title.indexOf('FERIE') !== -1) {
+          isClosedAllDay = true;
+          break;
+        }
+      }
+    }
+
+    if (isClosedAllDay) {
+      daysMap[dStr] = { status: 'closed', slots: [], label: 'Chiuso' };
+      continue;
+    }
+
+    // Slot teorici per il giorno
+    const candidateSlots = (dayOfWeek === 0) ? ['19:30'] : ['17:00', '18:00', '19:00'];
+    const availableSlots = [];
+
+    for (let s = 0; s < candidateSlots.length; s++) {
+      const parts = candidateSlots[s].split(':');
+      const hour  = parseInt(parts[0], 10);
+      const min   = parseInt(parts[1], 10);
+
+      const slotStart  = new Date(year, month - 1, day, hour, min, 0);
+      const slotEnd    = new Date(slotStart.getTime() + (durationHours * 60 * 60 * 1000));
+      const checkStart = new Date(slotStart.getTime() - bufferMs + 1000);
+      const checkEnd   = new Date(slotEnd.getTime() + bufferMs - 1000);
+
+      let conflict = false;
+      for (let e = 0; e < allEvents.length; e++) {
+        const ev = allEvents[e];
+        if (ev.isAllDayEvent()) continue;
+        if (ev.getStartTime() < checkEnd && ev.getEndTime() > checkStart) {
+          conflict = true;
+          break;
+        }
+      }
+
+      if (!conflict) {
+        availableSlots.push(candidateSlots[s]);
+      }
+    }
+
+    if (availableSlots.length > 0) {
+      daysMap[dStr] = {
+        status: 'available',
+        slots: availableSlots,
+        label: availableSlots.length === 1 ? '1 orario libero' : availableSlots.length + ' orari liberi'
+      };
+    } else {
+      daysMap[dStr] = {
+        status: 'full',
+        slots: [],
+        label: 'Tutto Pieno'
+      };
+    }
+  }
+
+  return daysMap;
 }
 
 // --- SALVATAGGIO PRENOTAZIONE (POST) ---

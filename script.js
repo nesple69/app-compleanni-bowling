@@ -316,7 +316,268 @@ function updateSummaryView() {
 
 
 // ============================================================
-// VERIFICA DISPONIBILITÀ
+// WIDGET CALENDARIO MENSILE INTERATTIVO CON DISPONIBILITÀ REAL-TIME
+// ============================================================
+
+let currentCalYear  = new Date().getFullYear();
+let currentCalMonth = new Date().getMonth() + 1; // 1-12
+let selectedDateISO = '';
+const monthAvailabilityCache = {};
+
+const MONTH_NAMES_IT = [
+  'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+];
+
+function updateMinParticipants() {
+  const partInput = document.getElementById('partecipanti');
+  if (!partInput) return;
+  let selectedTime = '17:00';
+  document.getElementsByName('fascia_oraria').forEach(r => { if (r.checked) selectedTime = r.value; });
+  let min = 15;
+  if (selectedTime === '18:00') min = 12;
+  if (selectedTime === '19:00') min = 10;
+  if (selectedTime === '19:30') min = 15;
+  partInput.min = min;
+  const currentVal = parseInt(partInput.value, 10);
+  if (isNaN(currentVal) || currentVal < min) {
+    partInput.value = min;
+    updateRealTimeCost();
+  }
+}
+
+async function fetchMonthAvailability(year, month) {
+  let selectedDuration = '1.5';
+  document.getElementsByName('durata').forEach(r => {
+    if (r.checked) selectedDuration = r.value.replace('h', '');
+  });
+
+  const cacheKey = `${year}-${month}_${selectedDuration}h`;
+  if (monthAvailabilityCache[cacheKey]) {
+    return monthAvailabilityCache[cacheKey];
+  }
+
+  try {
+    const url = `${SCRIPT_URL}?action=month_availability&year=${year}&month=${month}&duration=${selectedDuration}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data && data.success && data.days) {
+      monthAvailabilityCache[cacheKey] = data.days;
+      return data.days;
+    }
+  } catch (err) {
+    console.warn('Recupero disponibilità mensile non riuscito, uso fallback locale:', err);
+  }
+  return null;
+}
+
+async function renderInteractiveCalendar(year, month) {
+  const titleEl = document.getElementById('calMonthTitle');
+  const gridEl  = document.getElementById('calDaysGrid');
+  const prevBtn = document.getElementById('btnCalPrev');
+  if (!gridEl || !titleEl) return;
+
+  const now = new Date();
+  const currentRealYear  = now.getFullYear();
+  const currentRealMonth = now.getMonth() + 1;
+
+  if (prevBtn) {
+    prevBtn.disabled = (year < currentRealYear || (year === currentRealYear && month <= currentRealMonth));
+  }
+
+  titleEl.textContent = `${MONTH_NAMES_IT[month - 1]} ${year}`;
+  gridEl.innerHTML = '';
+
+  const numDays = new Date(year, month, 0).getDate();
+  let firstDayOfWeek = new Date(year, month - 1, 1).getDay(); // 0=Dom, 1=Lun
+  const startOffset = (firstDayOfWeek === 0) ? 6 : firstDayOfWeek - 1;
+
+  // Celle vuote prima del primo giorno del mese
+  for (let i = 0; i < startOffset; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-day-cell empty';
+    gridEl.appendChild(empty);
+  }
+
+  const dayCells = {};
+  const pad = n => (n < 10 ? '0' : '') + n;
+  const todayISO = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+  // Skeleton iniziale dei giorni
+  for (let day = 1; day <= numDays; day++) {
+    const cell = document.createElement('div');
+    cell.className = 'cal-day-cell';
+    const isoDate = `${year}-${pad(month)}-${pad(day)}`;
+
+    cell.dataset.date = isoDate;
+    cell.innerHTML = `
+      <span class="day-number">${day}</span>
+      <span class="day-dot"></span>
+    `;
+
+    gridEl.appendChild(cell);
+    dayCells[isoDate] = cell;
+
+    const dayDate = new Date(year, month - 1, day, 12, 0, 0);
+    const dayOfWeek = dayDate.getDay();
+
+    if (isoDate < todayISO) {
+      cell.classList.add('past');
+      cell.title = 'Data passata';
+    } else if (dayOfWeek === 3) {
+      cell.classList.add('closed');
+      cell.title = 'Chiuso (Mercoledì)';
+    }
+  }
+
+  // Chiamata backend per caricare le disponibilità reali
+  const daysData = await fetchMonthAvailability(year, month);
+
+  for (let day = 1; day <= numDays; day++) {
+    const isoDate = `${year}-${pad(month)}-${pad(day)}`;
+    const cell    = dayCells[isoDate];
+    if (!cell) continue;
+
+    const dayDate   = new Date(year, month - 1, day, 12, 0, 0);
+    const dayOfWeek = dayDate.getDay();
+
+    if (isoDate < todayISO || dayOfWeek === 3) continue;
+
+    if (daysData && daysData[isoDate]) {
+      const info = daysData[isoDate];
+      if (info.status === 'available') {
+        cell.classList.add('available');
+        cell.title = info.label || 'Disponibile';
+        cell.onclick = () => selectCalendarDate(isoDate, info.slots);
+      } else if (info.status === 'full') {
+        cell.classList.add('full');
+        cell.title = 'Tutto Pieno';
+      } else {
+        cell.classList.add('closed');
+        cell.title = info.label || 'Chiuso';
+      }
+    } else {
+      // Fallback
+      cell.classList.add('available');
+      const fallbackSlots = (dayOfWeek === 0) ? ['19:30'] : ['17:00', '18:00', '19:00'];
+      cell.onclick = () => selectCalendarDate(isoDate, fallbackSlots);
+    }
+
+    if (isoDate === selectedDateISO) {
+      cell.classList.add('selected');
+    }
+  }
+
+  // Pre-seleziona la prima data disponibile se non ce n'è una già scelta
+  if (!selectedDateISO || !document.getElementById('data').value) {
+    const firstAvailKey = Object.keys(dayCells).find(iso => dayCells[iso].classList.contains('available'));
+    if (firstAvailKey) {
+      const slots = (daysData && daysData[firstAvailKey]) ? daysData[firstAvailKey].slots : ['17:00', '18:00', '19:00'];
+      selectCalendarDate(firstAvailKey, slots);
+    }
+  }
+}
+
+function selectCalendarDate(isoDate, availableSlots) {
+  selectedDateISO = isoDate;
+  const dataInput = document.getElementById('data');
+  if (dataInput) {
+    dataInput.value = isoDate;
+  }
+
+  document.querySelectorAll('.cal-day-cell').forEach(c => {
+    if (c.dataset.date === isoDate) {
+      c.classList.add('selected');
+    } else {
+      c.classList.remove('selected');
+    }
+  });
+
+  const banner = document.getElementById('selectedDateBanner');
+  const label  = document.getElementById('selectedDateLabel');
+  if (banner && label) {
+    const [y, m, d] = isoDate.split('-').map(Number);
+    const dayDate = new Date(y, m - 1, d);
+    const daysName = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+    label.textContent = `${daysName[dayDate.getDay()]} ${d} ${MONTH_NAMES_IT[m - 1]} ${y}`;
+    banner.style.display = 'block';
+  }
+
+  const slots = (availableSlots && availableSlots.length > 0)
+    ? availableSlots
+    : ['17:00', '18:00', '19:00'];
+
+  renderTimeSlots(isoDate, slots);
+  updateRealTimeCost();
+  updateDurationLabels();
+
+  const msg = document.getElementById('availability-msg');
+  if (msg) {
+    msg.textContent = '✅ Orario Disponibile!';
+    msg.style.color = '#fff';
+    msg.dataset.available = 'true';
+  }
+  const nextBtn = document.getElementById('nextFromStep2ToStep1');
+  if (nextBtn) nextBtn.disabled = false;
+}
+
+function renderTimeSlots(isoDate, availableSlots) {
+  const container = document.getElementById('timeSlotsContainer');
+  if (!container) return;
+
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const dayOfWeek = new Date(y, m - 1, d).getDay();
+  const isSunday = (dayOfWeek === 0);
+
+  const allPossibleSlots = isSunday
+    ? [{ time: '19:30', sub: 'Min 15 Persone • Solo Dom' }]
+    : [
+        { time: '17:00', sub: 'Min 15 Persone' },
+        { time: '18:00', sub: 'Min 12 Persone' },
+        { time: '19:00', sub: 'Min 10 Persone' }
+      ];
+
+  container.innerHTML = '';
+  let checkedOne = false;
+
+  allPossibleSlots.forEach((slot) => {
+    const isAvail = availableSlots.includes(slot.time);
+    const shouldCheck = isAvail && !checkedOne;
+    if (shouldCheck) checkedOne = true;
+
+    const card = document.createElement('label');
+    card.className = 'time-card' + (!isAvail ? ' disabled-slot' : '');
+    if (!isAvail) {
+      card.style.opacity = '0.35';
+      card.style.cursor = 'not-allowed';
+      card.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+    }
+
+    card.innerHTML = `
+      <input type="radio" name="fascia_oraria" value="${slot.time}" ${shouldCheck ? 'checked' : ''} ${!isAvail ? 'disabled' : ''}>
+      <div class="card-content">
+        <span class="time-label">${slot.time}</span>
+        <span class="time-sub">${isAvail ? slot.sub : '❌ Già Occupato'}</span>
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+
+  container.querySelectorAll('input[name="fascia_oraria"]').forEach(input => {
+    input.addEventListener('change', () => {
+      updateMinParticipants();
+      updateRealTimeCost();
+    });
+  });
+
+  updateMinParticipants();
+}
+
+
+// ============================================================
+// VERIFICA DISPONIBILITÀ SINGOLA (FALLBACK / SICUREZZA)
 // ============================================================
 
 // AbortController a scope di modulo per cancellare richieste obsolete (fix race condition)
@@ -532,70 +793,41 @@ function init() {
   document.getElementById('partecipanti').addEventListener('input', updateRealTimeCost);
   document.getElementsByName('durata').forEach(el => el.addEventListener('change', () => {
     updateRealTimeCost();
-    // Riverifica disponibilità se la durata aumenta o cambia
-    checkAvailability();
+    // Rigenera il calendario con la nuova durata selezionata
+    renderInteractiveCalendar(currentCalYear, currentCalMonth);
   }));
   document.getElementsByName('pacchetto').forEach(el => el.addEventListener('change', updateRealTimeCost));
   document.getElementById('patatine').addEventListener('change', updateRealTimeCost);
   document.getElementById('foto_torta').addEventListener('change', updateRealTimeCost);
 
-  // --- Partecipanti minimi dinamici per fascia oraria ---
-  const timeSlots = document.getElementsByName('fascia_oraria');
-  const partInput = document.getElementById('partecipanti');
+  // --- Navigazione Mese Calendario Interattivo ---
+  const btnPrev = document.getElementById('btnCalPrev');
+  const btnNext = document.getElementById('btnCalNext');
 
-  function updateMinParticipants() {
-    let selectedTime = '17:00';
-    timeSlots.forEach(r => { if (r.checked) selectedTime = r.value; });
-    let min = 15;
-    if (selectedTime === '18:00') min = 12;
-    if (selectedTime === '19:00') min = 10;
-    partInput.min = min;
-    const currentVal = parseInt(partInput.value, 10);
-    if (isNaN(currentVal) || currentVal < min) {
-      partInput.value = min;
-      updateRealTimeCost();
-    }
+  if (btnPrev) {
+    btnPrev.addEventListener('click', () => {
+      currentCalMonth--;
+      if (currentCalMonth < 1) {
+        currentCalMonth = 12;
+        currentCalYear--;
+      }
+      renderInteractiveCalendar(currentCalYear, currentCalMonth);
+    });
   }
 
-  timeSlots.forEach(el => el.addEventListener('change', () => {
-    updateMinParticipants();
-    checkAvailability();
-  }));
-
-  // --- Filtro slot orari per data (domenica vs feriale) ---
-  document.getElementById('data').addEventListener('change', (e) => {
-    const val = e.target.value;
-    if (!val) return;
-
-    const [year, month, day] = val.split('-').map(Number);
-    const selectedDate = new Date(year, month - 1, day);
-    const dayOfWeek    = selectedDate.getDay();
-
-    const weekdaySlots = document.querySelectorAll('.time-card[data-day-type="weekday"]');
-    const sundaySlots  = document.querySelectorAll('.time-card[data-day-type="sunday"]');
-    const currentChecked = document.querySelector('input[name="fascia_oraria"]:checked');
-
-    if (dayOfWeek === 0) {
-      weekdaySlots.forEach(slot => slot.style.display = 'none');
-      sundaySlots.forEach(slot => {
-        slot.style.display = 'flex';
-        slot.querySelector('input').checked = true;
-      });
-    } else {
-      weekdaySlots.forEach(slot => slot.style.display = 'flex');
-      sundaySlots.forEach(slot => slot.style.display = 'none');
-      // Preserva lo slot orario selezionato se è già un feriale valido
-      if (!currentChecked || currentChecked.value === '19:30') {
-        const firstWeekdaySlot = document.querySelector('.time-card[data-day-type="weekday"] input');
-        if (firstWeekdaySlot) firstWeekdaySlot.checked = true;
+  if (btnNext) {
+    btnNext.addEventListener('click', () => {
+      currentCalMonth++;
+      if (currentCalMonth > 12) {
+        currentCalMonth = 1;
+        currentCalYear++;
       }
-    }
+      renderInteractiveCalendar(currentCalYear, currentCalMonth);
+    });
+  }
 
-    updateMinParticipants();
-    updateDurationLabels();
-    updateRealTimeCost();
-    checkAvailability();
-  });
+  // Caricamento iniziale del calendario
+  renderInteractiveCalendar(currentCalYear, currentCalMonth);
 
   updateMinParticipants();
   updateDurationLabels();

@@ -1276,3 +1276,245 @@ h1, h2, .subtitle, .welcome-title, section.section h2 {
   font-family: var(--font-title) !important;
   letter-spacing: 0.5px;
 }
+
+/* ------------------------------------------------------------
+   Widget Calendario Mensile Interattivo (Step 2)
+   ------------------------------------------------------------ */
+.calendar-widget {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 18px;
+  padding: 1.1rem;
+  margin: 1rem auto;
+  max-width: 440px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.9rem;
+}
+
+.calendar-month-title {
+  font-family: var(--font-title);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+  text-transform: capitalize;
+}
+
+.btn-cal-nav {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cal-nav:hover:not(:disabled) {
+  background: var(--color-accent);
+  color: #000;
+  border-color: var(--color-accent);
+  transform: scale(1.1);
+}
+
+.btn-cal-nav:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  min-height: 220px;
+}
+
+.cal-day-cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+}
+
+.cal-day-cell .day-number {
+  line-height: 1;
+  margin-bottom: 3px;
+}
+
+.cal-day-cell .day-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: block;
+}
+
+/* Stato Disponibile */
+.cal-day-cell.available {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #fff;
+}
+
+.cal-day-cell.available .day-dot {
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.cal-day-cell.available:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: #10b981;
+  transform: translateY(-2px);
+}
+
+/* Stato Selezionato */
+.cal-day-cell.selected {
+  background: rgba(255, 193, 7, 0.3) !important;
+  border: 2px solid #ffc107 !important;
+  color: #fff !important;
+  box-shadow: 0 0 14px rgba(255, 193, 7, 0.6) !important;
+  transform: scale(1.08) !important;
+  z-index: 2;
+}
+
+.cal-day-cell.selected .day-dot {
+  background: #ffc107;
+  box-shadow: 0 0 8px #ffc107;
+}
+
+/* Stato Tutto Pieno */
+.cal-day-cell.full {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.cal-day-cell.full .day-dot {
+  background: #ef4444;
+}
+
+/* Stato Chiuso (Mercoledì / Festivi) */
+.cal-day-cell.closed {
+  opacity: 0.35;
+  background: transparent;
+  cursor: not-allowed;
+  color: #64748b;
+}
+
+.cal-day-cell.closed .day-dot {
+  background: #64748b;
+}
+
+/* Giorni Passati */
+.cal-day-cell.past {
+  opacity: 0.2;
+  cursor: not-allowed;
+  background: transparent;
+  color: #475569;
+}
+
+.cal-day-cell.empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Legenda */
+.calendar-legend {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.dot-available {
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.dot-full {
+  background: #ef4444;
+}
+
+.dot-closed {
+  background: #64748b;
+}
+
+/* Banner Data Selezionata */
+.selected-date-banner {
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid rgba(255, 193, 7, 0.4);
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  margin: 1rem auto 0 auto;
+  max-width: 440px;
+  text-align: center;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.selected-date-banner strong {
+  color: #ffc107;
+}
+
+/* Adattamento Mobile (< 480px) */
+@media (max-width: 480px) {
+  .calendar-widget {
+    padding: 0.8rem;
+  }
+  .cal-day-cell {
+    font-size: 0.85rem;
+    border-radius: 8px;
+  }
+  .calendar-days-grid {
+    gap: 3px;
+  }
+}
