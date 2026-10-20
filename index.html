@@ -227,7 +227,10 @@
         </div>
 
         <label for="partecipanti">Numero Partecipanti</label>
-        <input type="number" id="partecipanti" name="partecipanti" class="input-large" min="10" max="100" value="15" required>
+        <input type="number" id="partecipanti" name="partecipanti" class="input-large" min="10" max="36" value="15" required>
+        <div id="partecipanti-note" style="text-align: center; margin-top: 0.35rem; font-size: 0.85rem; color: #94a3b8;">
+          Max 36 partecipanti (6 piste). Più invitati? <span id="btnOperatorUnlock" style="color: #ffc107; text-decoration: underline; cursor: pointer;">Sblocca operatore</span>
+        </div>
 
         <div id="availability-msg" style="text-align: center; margin-top: 1rem; font-weight: bold; min-height: 1.5rem;">
         </div>
@@ -521,7 +524,23 @@
     </div>
   </div>
 
-  <script src="script.js?v=7.0"></script>
+  <!-- Operator PIN Modal -->
+  <div id="operatorModal" class="modal-overlay" role="dialog" aria-modal="true" style="display:none;">
+    <div class="modal-content" style="max-width: 420px; text-align: center;">
+      <h3 style="color: #ffc107; margin-bottom: 0.5rem;">Sblocco Operatore</h3>
+      <p style="font-size: 0.95rem; color: #cbd5e1; margin-bottom: 1rem;">
+        Inserisci il PIN operatore per consentire più di 36 partecipanti (piste extra):
+      </p>
+      <input type="password" id="operatorPinInput" placeholder="Inserisci PIN (es. 1234)" style="width: 100%; padding: 0.8rem; font-size: 1.1rem; text-align: center; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; margin-bottom: 0.8rem;">
+      <div id="operatorPinError" style="color: #ef4444; font-size: 0.85rem; margin-bottom: 0.8rem; display: none;">PIN non corretto. Riprova.</div>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button type="button" class="btn btn-back" id="btnCancelOperator">Annulla</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmOperator">Sblocca</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js?v=8.0"></script>
 </body>
 
 </html>
