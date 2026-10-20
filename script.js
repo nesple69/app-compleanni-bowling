@@ -7,7 +7,7 @@
 // come proprietà "API_SECRET" (Impostazioni progetto → Proprietà dello script).
 const API_TOKEN = 'BV2026-f8e3a7d2b9c4-k7p1';
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzoxNM77DBO4xRQBdz27XmvpFMdh8mQYzqsIbq4aVCKnZGgSkNPDESEadui1jHsLqJDHw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzEwpsUfQzU-1IAOd0c6JPUr_Fct_xL-ivTxpDC7OTAnSSBJu0-DQfS0vNTv8nOrVBgSg/exec';
 
 // Tariffe Bowling per pista
 // Lunedì - Giovedì: 30,00 € / ora
@@ -81,7 +81,27 @@ function startBooking() {
 
 function showStep(stepId) {
   document.querySelectorAll('.step').forEach(el => el.style.display = 'none');
-  document.getElementById(stepId).style.display = 'block';
+  const target = document.getElementById(stepId);
+  if (target) target.style.display = 'block';
+
+  // Scorri dolcemente all'inizio del form
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  const progressBar   = document.querySelector('.progress-bar');
+  const stepNavHeader = document.querySelector('.step-nav-header');
+  const topBackBtn    = document.getElementById('topStepBackBtn');
+
+  if (stepId === 'step_success') {
+    if (progressBar) progressBar.style.display = 'none';
+    if (stepNavHeader) stepNavHeader.style.display = 'none';
+    return;
+  } else {
+    if (progressBar) progressBar.style.display = 'flex';
+    if (stepNavHeader) stepNavHeader.style.display = 'flex';
+    if (topBackBtn) {
+      topBackBtn.textContent = (stepId === 'step2') ? '← Torna alla Home' : '← Torna Indietro';
+    }
+  }
 
   const stepMap = { step2: 1, step1: 2, step_package: 3, step_cake: 4, step3: 5, step4: 6 };
   const stepNum = stepMap[stepId] || 0;
@@ -89,8 +109,13 @@ function showStep(stepId) {
   for (let i = 1; i <= 6; i++) {
     const ind = document.getElementById('ind' + i);
     if (!ind) continue;
-    if (i <= stepNum) ind.classList.add('active');
-    else ind.classList.remove('active');
+    if (i <= stepNum) {
+      ind.classList.add('active');
+      ind.style.cursor = (i < stepNum) ? 'pointer' : 'default';
+    } else {
+      ind.classList.remove('active');
+      ind.style.cursor = 'default';
+    }
   }
 }
 
@@ -112,13 +137,10 @@ function updateRealTimeCost() {
   const fries     = document.getElementById('patatine').checked;
   const cakePhoto = document.getElementById('foto_torta').checked;
 
-  const step3Visible  = document.getElementById('step3').style.display === 'block';
-  const step4Visible  = document.getElementById('step4').style.display === 'block';
-  const includeLanes  = step3Visible || step4Visible;
-
   const pricePerLaneMap = getPricePerLaneMap();
   const lanes    = part > 0 ? Math.ceil(part / MAX_PLAYERS_PER_LANE) : 0;
-  const laneCost = includeLanes ? lanes * (pricePerLaneMap[duration] || 0) : 0;
+  // Costo pista sempre incluso per trasparenza ed evitare sbalzi improvvisi di prezzo
+  const laneCost = lanes * (pricePerLaneMap[duration] || 0);
 
   const menuPrice      = MENUS[selectedMenuKey] ? MENUS[selectedMenuKey].price : 0;
   const friesCost      = fries ? FRIES_PRICE : 0;
@@ -136,25 +158,158 @@ function updateRealTimeCost() {
 // RIEPILOGO (Step 4)
 // ============================================================
 
+
+// ============================================================
+// BIGLIETTO DIGITALE D'INVITO — Popolamento, Download e Condivisione
+// ============================================================
+
+function popolaBiglietto(dati) {
+  if (!dati) return;
+
+  const elName  = document.getElementById('displayHostName');
+  const elTitle = document.getElementById('displayPartyTitle');
+  const elDate  = document.getElementById('displayDate');
+  const elTime  = document.getElementById('displayTime');
+
+  if (elName) {
+    elName.textContent = (dati.nome || 'FESTEGGIATO').toUpperCase();
+  }
+
+  if (elTitle) {
+    if (dati.eta) {
+      elTitle.textContent = `compie ${dati.eta} anni!`;
+    } else {
+      elTitle.textContent = 'Festa di Compleanno!';
+    }
+  }
+
+  if (elDate) {
+    elDate.textContent = dati.data || '-';
+  }
+
+  if (elTime) {
+    elTime.textContent = dati.ora || '-';
+  }
+}
+
+async function scaricaImmagine() {
+  const card = document.getElementById('invitationCard');
+  if (!card) return;
+
+  try {
+    const canvas = await html2canvas(card, {
+      scale: 3,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null
+    });
+
+    const nome = (document.getElementById('displayHostName')?.textContent || 'Compleanno').trim();
+    const link = document.createElement('a');
+    link.download = `Invito_Bowling_${nome}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (err) {
+    console.error('Errore generazione immagine:', err);
+    showCustomAlert('Impossibile scaricare l\'immagine automaticamente. Puoi fare uno screenshot del biglietto.');
+  }
+}
+
+async function scaricaPDF() {
+  const card = document.getElementById('invitationCard');
+  if (!card) return;
+
+  try {
+    const canvas = await html2canvas(card, {
+      scale: 3,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff'
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a5'
+    });
+
+    const pageWidth  = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 10;
+    const imgWidth = pageWidth - (margin * 2);
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const posY = Math.max(margin, (pageHeight - imgHeight) / 2);
+
+    pdf.addImage(imgData, 'JPEG', margin, posY, imgWidth, imgHeight);
+
+    const nome = (document.getElementById('displayHostName')?.textContent || 'Compleanno').trim();
+    pdf.save(`Invito_Bowling_${nome}.pdf`);
+  } catch (err) {
+    console.error('Errore generazione PDF:', err);
+    showCustomAlert('Impossibile generare il PDF. Puoi stampare questa schermata.');
+  }
+}
+
+function condividiWhatsApp() {
+  const nome = (document.getElementById('displayHostName')?.textContent || 'mio figlio').trim();
+  const data = (document.getElementById('displayDate')?.textContent || '').trim();
+  const ora  = (document.getElementById('displayTime')?.textContent || '').trim();
+  const eta  = (document.getElementById('displayPartyTitle')?.textContent || '').trim();
+
+  const msg = `🎳 *INVITO ALLA FESTA DI ${nome.toUpperCase()}!* 🎉\n` +
+              `${eta ? eta + '\n' : ''}` +
+              `📅 *Data:* ${data}\n` +
+              `⏰ *Orario:* ${ora}\n` +
+              `📍 *Dove:* Bowling Valdera (Via Tosco Romagnola 127, Fornacette - PI)\n` +
+              `📞 *Info locale:* 0587 420120\n\n` +
+              `Ti aspetto per strike, musica, pizza e torta! 🍕🎂🎳`;
+
+  const encodedMsg = encodeURIComponent(msg);
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    // Smartphone: apre direttamente l'app WhatsApp nativa
+    window.location.href = `whatsapp://send?text=${encodedMsg}`;
+  } else {
+    // PC / Desktop: apre direttamente WhatsApp Web
+    window.open(`https://web.whatsapp.com/send?text=${encodedMsg}`, '_blank');
+  }
+}
+
 function updateSummaryView() {
   const data     = updateRealTimeCost();
   const menuInfo = MENUS[data.selectedMenuKey];
 
-  const nomeFesteggiato = document.getElementById('festeggiato').value;
-  document.getElementById('ticket-name').textContent         = nomeFesteggiato.toUpperCase();
-  document.getElementById('ticket-header-event').textContent = `Festa di Compleanno di ${nomeFesteggiato}`;
+  const nomeFesteggiato = document.getElementById('festeggiato').value.trim() || 'Festeggiato';
+  const etaFesteggiato  = document.getElementById('anni_festeggiato').value.trim();
 
   const d = document.getElementById('data').value;
-  document.getElementById('ticket-date').textContent = d ? d.split('-').reverse().join('/') : '-';
+  let formattedDate = '-';
+  if (d) {
+    const parts = d.split('-').map(Number);
+    const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    formattedDate = `${parts[2]} ${months[parts[1] - 1]} ${parts[0]}`;
+  }
 
   let time = '';
   document.getElementsByName('fascia_oraria').forEach(r => { if (r.checked) time = r.value; });
-  document.getElementById('ticket-time').textContent = time;
 
-  document.getElementById('ticket-lanes').textContent        = data.lanes + ' PISTE';
+  // Popola automaticamente il Biglietto Digitale d'Invito
+  popolaBiglietto({
+    nome: nomeFesteggiato,
+    eta: etaFesteggiato,
+    data: formattedDate,
+    ora: time
+  });
+
+  // Correzione concordanza singolare/plurale (1 PISTA vs 2 PISTE)
+  document.getElementById('ticket-lanes').textContent        = data.lanes === 1 ? '1 PISTA' : `${data.lanes} PISTE`;
   document.getElementById('ticket-participants').textContent = data.part;
 
-  const durationLabel = data.duration.toUpperCase().replace('H', ' ORE');
+  // Correzione concordanza singolare/plurale (1 ORA vs 2 ORE)
+  const durationLabel = data.duration === '1h' ? '1 ORA' : data.duration.toUpperCase().replace('H', ' ORE');
   document.getElementById('ticket-duration').textContent = durationLabel;
 
   let cake = '';
@@ -167,10 +322,13 @@ function updateSummaryView() {
   document.getElementById('ticket-menu').style.whiteSpace = 'pre-wrap';
 
   let cakeSummary = cake.toUpperCase();
-  if (cakeMsg)       cakeSummary += `\n("${cakeMsg}")`;
-  if (data.cakePhoto) cakeSummary += '\n+ FOTO';
+  if (data.cakePhoto) cakeSummary += ' (+ Foto)';
   document.getElementById('ticket-cake').textContent  = cakeSummary;
-  document.getElementById('ticket-cake').style.whiteSpace = 'pre-wrap';
+
+  const elCakeMsg = document.getElementById('ticket-cake-msg');
+  if (elCakeMsg) {
+    elCakeMsg.textContent = cakeMsg ? `"${cakeMsg}"` : 'Nessuna';
+  }
 
   document.getElementById('totalSpan').textContent = data.total;
   return menuSummary;
@@ -300,12 +458,14 @@ async function saveToDatabase() {
   let selectedDuration = '1.5h';
   document.getElementsByName('durata').forEach(r => { if (r.checked) selectedDuration = r.value; });
 
+  const dettagliAllergie = document.getElementById('dettagli_allergie')?.value.trim() || 'Nessuna';
+
   const payload = {
     _token:              API_TOKEN,
-    festeggiato:         document.getElementById('festeggiato').value,
-    anni:                document.getElementById('anni_festeggiato').value,
+    festeggiato:         document.getElementById('festeggiato').value.trim(),
+    anni:                document.getElementById('anni_festeggiato').value.trim(),
     cliente:             `${nome} ${cognome}`.trim(),
-    telefono:            document.getElementById('telefono').value,
+    telefono:            document.getElementById('telefono').value.trim(),
     email:               document.getElementById('email').value.trim(),
     data_festa:          dataFestaItalian,
     ora:                 document.querySelector('input[name="fascia_oraria"]:checked')?.value,
@@ -313,71 +473,48 @@ async function saveToDatabase() {
     menu:                document.querySelector('input[name="pacchetto"]:checked')?.value,
     patatine:            document.getElementById('patatine').checked ? 'Sì' : 'No',
     torta:               document.querySelector('input[name="torta"]:checked')?.value,
-    scritta_torta:       document.getElementById('scritta_torta').value,
-    altre_richieste:     document.getElementById('altre_richieste').value,
+    scritta_torta:       document.getElementById('scritta_torta').value.trim(),
+    altre_richieste:     document.getElementById('altre_richieste').value.trim(),
     durata:              selectedDuration,
     foto_torta:          document.getElementById('foto_torta').checked ? 'Sì' : 'No',
     allergie_dichiarate: document.getElementById('allergy_declaration').checked ? 'Confermato' : 'No',
+    dettagli_allergie:   dettagliAllergie,
     gdpr:                document.getElementById('gdpr_consent').checked ? 'Accettato' : 'No',
     marketing:           document.getElementById('marketing_consent').checked ? 'Sì' : 'No',
     totale:              parseFloat(document.getElementById('totalSpan').textContent.replace(/[€\s]/g, '').replace(',', '.'))
   };
 
   try {
-    // Fix: rimosso mode:'no-cors' — la risposta è ora leggibile e verificabile.
-    // Content-Type: text/plain evita il preflight CORS su Apps Script.
     const response = await fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload)
     });
 
-    if (!response.ok) throw new Error('Server error: ' + response.status);
+    if (!response.ok) throw new Error('Errore di comunicazione col server: ' + response.status);
 
     const text = await response.text();
 
-    // Compatibilità con entrambi i formati:
-    // - Vecchio formato (pre-aggiornamento Apps Script): stringa "Success"
-    // - Nuovo formato (post-aggiornamento): JSON { success: true }
     if (text.startsWith('{')) {
       const result = JSON.parse(text);
-      return result.success === true;
+      if (result.success === true) {
+        return { success: true };
+      }
+      return { success: false, error: result.error || 'Errore durante la registrazione.' };
     } else {
-      return text.trim() === 'Success';
+      const ok = text.trim() === 'Success';
+      return ok ? { success: true } : { success: false, error: text.trim() };
     }
 
   } catch (e) {
     console.error('Database save failed', e);
-    return false;
+    return { success: false, error: 'Connessione al server non riuscita. Riprova tra poco o contattaci al 0587 420120.' };
   }
 }
 
 
 // ============================================================
-// RESET CON COUNTDOWN VISIBILE
-// ============================================================
-
-function scheduleReset(delayMs = 8000) {
-  let remaining = Math.floor(delayMs / 1000);
-  const countdown = document.createElement('p');
-  countdown.style.cssText = 'text-align:center; color:#aaa; margin-top:1.5rem; font-size:0.9rem;';
-  countdown.textContent = `Ritorno alla home in ${remaining}s`;
-  document.getElementById('step_success').appendChild(countdown);
-
-  const interval = setInterval(() => {
-    remaining--;
-    if (remaining <= 0) {
-      clearInterval(interval);
-      location.reload();
-    } else {
-      countdown.textContent = `Ritorno alla home in ${remaining}s`;
-    }
-  }, 1000);
-}
-
-
-// ============================================================
-// CUSTOM ALERT MODAL
+// CUSTOM ALERT & MODALS
 // ============================================================
 
 function showCustomAlert(msg) {
@@ -401,9 +538,23 @@ function closeCustomAlert() {
 
 function init() {
 
-  // --- Costo in tempo reale ---
+  // Imposta data minima di prenotazione (data odierna)
+  const dateInput = document.getElementById('data');
+  if (dateInput) {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    dateInput.min = `${yyyy}-${mm}-${dd}`;
+  }
+
+  // --- Costo in tempo reale e riverifica disponibilità ---
   document.getElementById('partecipanti').addEventListener('input', updateRealTimeCost);
-  document.getElementsByName('durata').forEach(el => el.addEventListener('change', updateRealTimeCost));
+  document.getElementsByName('durata').forEach(el => el.addEventListener('change', () => {
+    updateRealTimeCost();
+    // Riverifica disponibilità se la durata aumenta o cambia
+    checkAvailability();
+  }));
   document.getElementsByName('pacchetto').forEach(el => el.addEventListener('change', updateRealTimeCost));
   document.getElementById('patatine').addEventListener('change', updateRealTimeCost);
   document.getElementById('foto_torta').addEventListener('change', updateRealTimeCost);
@@ -433,13 +584,16 @@ function init() {
 
   // --- Filtro slot orari per data (domenica vs feriale) ---
   document.getElementById('data').addEventListener('change', (e) => {
-    // Fix: costruttore locale per evitare il bug del fuso orario UTC
-    const [year, month, day] = e.target.value.split('-').map(Number);
+    const val = e.target.value;
+    if (!val) return;
+
+    const [year, month, day] = val.split('-').map(Number);
     const selectedDate = new Date(year, month - 1, day);
     const dayOfWeek    = selectedDate.getDay();
 
     const weekdaySlots = document.querySelectorAll('.time-card[data-day-type="weekday"]');
     const sundaySlots  = document.querySelectorAll('.time-card[data-day-type="sunday"]');
+    const currentChecked = document.querySelector('input[name="fascia_oraria"]:checked');
 
     if (dayOfWeek === 0) {
       weekdaySlots.forEach(slot => slot.style.display = 'none');
@@ -450,8 +604,11 @@ function init() {
     } else {
       weekdaySlots.forEach(slot => slot.style.display = 'flex');
       sundaySlots.forEach(slot => slot.style.display = 'none');
-      const firstWeekdaySlot = document.querySelector('.time-card[data-day-type="weekday"] input');
-      if (firstWeekdaySlot) firstWeekdaySlot.checked = true;
+      // Preserva lo slot orario selezionato se è già un feriale valido
+      if (!currentChecked || currentChecked.value === '19:30') {
+        const firstWeekdaySlot = document.querySelector('.time-card[data-day-type="weekday"] input');
+        if (firstWeekdaySlot) firstWeekdaySlot.checked = true;
+      }
     }
 
     updateMinParticipants();
@@ -613,7 +770,7 @@ function init() {
   });
 
   // ----------------------------------------------------------------
-  // NAVIGAZIONE INDIETRO
+  // NAVIGAZIONE INDIETRO (Pulsanti in basso)
   // ----------------------------------------------------------------
   document.getElementById('backFromStep2ToWelcome').addEventListener('click', () => {
     document.getElementById('bookingSteps').style.display = 'none';
@@ -621,7 +778,10 @@ function init() {
     document.querySelector('header').style.display        = 'none';
   });
 
-  document.getElementById('backFromStep1ToStep2').addEventListener('click', () => showStep('step2'));
+  document.getElementById('backFromStep1ToStep2').addEventListener('click', () => {
+    showStep('step2');
+    document.getElementById('floatingCost').classList.add('hidden');
+  });
 
   document.getElementById('backFromPackageToStep1').addEventListener('click', () => {
     showStep('step1');
@@ -644,6 +804,88 @@ function init() {
   });
 
   // ----------------------------------------------------------------
+  // PULSANTE SUPERIORE (In alto ad ogni schermata)
+  // ----------------------------------------------------------------
+  const topStepBackBtn = document.getElementById('topStepBackBtn');
+  if (topStepBackBtn) {
+    topStepBackBtn.addEventListener('click', () => {
+      const currentStep = document.querySelector('.step[style*="display: block"]')?.id;
+      if (!currentStep || currentStep === 'step2') {
+        document.getElementById('bookingSteps').style.display = 'none';
+        document.getElementById('welcomeStep').style.display  = 'block';
+        document.querySelector('header').style.display        = 'none';
+        return;
+      }
+      const prevMap = {
+        step1: 'step2',
+        step_package: 'step1',
+        step_cake: 'step_package',
+        step3: 'step_cake',
+        step4: 'step3'
+      };
+      const prev = prevMap[currentStep];
+      if (prev) {
+        if (prev === 'step1' || prev === 'step2') {
+          document.getElementById('floatingCost').classList.add('hidden');
+        }
+        showStep(prev);
+        updateRealTimeCost();
+      }
+    });
+  }
+
+  // ----------------------------------------------------------------
+  // INDICATORI NUMERATI CLICCABILI (Salta direttamente indietro)
+  // ----------------------------------------------------------------
+  const stepMap = { step2: 1, step1: 2, step_package: 3, step_cake: 4, step3: 5, step4: 6 };
+  const stepMapRev = { 1: 'step2', 2: 'step1', 3: 'step_package', 4: 'step_cake', 5: 'step3', 6: 'step4' };
+
+  for (let i = 1; i <= 6; i++) {
+    const ind = document.getElementById('ind' + i);
+    if (ind) {
+      ind.addEventListener('click', () => {
+        const currentStep = document.querySelector('.step[style*="display: block"]')?.id;
+        const currentNum = stepMap[currentStep] || 1;
+        // Permette al cliente di cliccare su qualsiasi passaggio precedente già compilato
+        if (i < currentNum) {
+          const target = stepMapRev[i];
+          if (target === 'step2' || target === 'step1') {
+            document.getElementById('floatingCost').classList.add('hidden');
+          }
+          showStep(target);
+          updateRealTimeCost();
+        }
+      });
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // SCORCIATOIE DI MODIFICA RAPIDA NEL RIEPILOGO (Step 4)
+  // ----------------------------------------------------------------
+  document.getElementById('btnEditDate')?.addEventListener('click', () => {
+    document.getElementById('floatingCost').classList.add('hidden');
+    showStep('step2');
+    updateRealTimeCost();
+  });
+  document.getElementById('btnEditContact')?.addEventListener('click', () => {
+    document.getElementById('floatingCost').classList.add('hidden');
+    showStep('step1');
+    updateRealTimeCost();
+  });
+  document.getElementById('btnEditMenu')?.addEventListener('click', () => {
+    showStep('step_package');
+    updateRealTimeCost();
+  });
+  document.getElementById('btnEditCake')?.addEventListener('click', () => {
+    showStep('step_cake');
+    updateRealTimeCost();
+  });
+  document.getElementById('btnEditDuration')?.addEventListener('click', () => {
+    showStep('step3');
+    updateRealTimeCost();
+  });
+
+  // ----------------------------------------------------------------
   // CONFERMA PRENOTAZIONE
   // ----------------------------------------------------------------
   const confirmBtn = document.getElementById('confirmBooking');
@@ -652,13 +894,56 @@ function init() {
       confirmBtn.disabled    = true;
       confirmBtn.textContent = 'Salvataggio in corso...';
 
-      const success = await saveToDatabase();
+      const saveResult = await saveToDatabase();
 
-      if (success) {
+      if (saveResult && saveResult.success) {
+        // Popola la scheda di conferma
+        const festeggiato = document.getElementById('festeggiato')?.value || '-';
+        const date        = document.getElementById('displayDate')?.textContent || document.getElementById('ticket-date')?.textContent || '-';
+        const time        = document.getElementById('displayTime')?.textContent || document.getElementById('ticket-time')?.textContent || '-';
+        const part        = document.getElementById('ticket-participants')?.textContent || '-';
+        const tot         = document.getElementById('totalSpan')?.textContent || '-';
+
+        const elCelebrant = document.getElementById('success-celebrant');
+        const elDate      = document.getElementById('success-date');
+        const elTime      = document.getElementById('success-time');
+        const elPart      = document.getElementById('success-participants');
+        const elTot       = document.getElementById('success-total');
+
+        // Recupero durata, menu, torta e scritta
+        let rawDuration = '1.5h';
+        document.getElementsByName('durata').forEach(r => { if (r.checked) rawDuration = r.value; });
+        const durationMap = { '1h': '1 Ora', '1.5h': '1 Ora e Mezza (1.5h)', '2h': '2 Ore', '2.5h': '2 Ore e Mezza (2.5h)' };
+        const durationText = durationMap[rawDuration] || rawDuration;
+
+        let selectedMenu = document.querySelector('input[name="pacchetto"]:checked')?.value || '-';
+        if (document.getElementById('patatine')?.checked) selectedMenu += ' + Patatine Fritte';
+
+        let selectedCake = document.querySelector('input[name="torta"]:checked')?.value || '-';
+        if (document.getElementById('foto_torta')?.checked) selectedCake += ' (con foto stampata)';
+
+        const cakeMsg = document.getElementById('scritta_torta')?.value.trim() || 'Nessuna';
+
+        const elDuration = document.getElementById('success-duration');
+        const elMenu     = document.getElementById('success-menu');
+        const elCake     = document.getElementById('success-cake');
+        const elCakeMsg  = document.getElementById('success-cake-msg');
+
+        if (elCelebrant) elCelebrant.textContent = festeggiato.toUpperCase();
+        if (elDate)      elDate.textContent      = date;
+        if (elTime)      elTime.textContent      = time;
+        if (elDuration)  elDuration.textContent  = durationText;
+        if (elPart)      elPart.textContent      = part + ' persone';
+        if (elMenu)      elMenu.textContent      = selectedMenu;
+        if (elCake)      elCake.textContent      = selectedCake;
+        if (elCakeMsg)   elCakeMsg.textContent   = cakeMsg !== 'Nessuna' ? `"${cakeMsg}"` : 'Nessuna';
+        if (elTot)       elTot.textContent       = tot + ' €';
+
         showStep('step_success');
         document.getElementById('floatingCost').classList.add('hidden');
       } else {
-        showCustomAlert('Ops! Qualcosa è andato storto nel salvataggio. Riprova tra un momento.');
+        const errorMsg = (saveResult && saveResult.error) ? saveResult.error : 'Ops! Qualcosa è andato storto nel salvataggio. Riprova tra un momento.';
+        showCustomAlert(errorMsg);
         confirmBtn.disabled    = false;
         confirmBtn.textContent = 'Conferma Prenotazione';
       }
@@ -666,53 +951,55 @@ function init() {
   }
 
   // ----------------------------------------------------------------
-  // INVITO WHATSAPP
+  // PULSANTE TORNA ALLA HOME (FINE PROCEDURA)
   // ----------------------------------------------------------------
-  const sendInviteBtn = document.getElementById('sendInviteWa');
-  if (sendInviteBtn) {
-    sendInviteBtn.addEventListener('click', () => {
-      const festeggiato = document.getElementById('festeggiato').value;
-      const clientTel   = document.getElementById('telefono').value;
-      const date        = document.getElementById('ticket-date').textContent;
-      const time        = document.getElementById('ticket-time').textContent;
-
-      const inviteMsg =
-        `*INVITO ALLA FESTA DI ${festeggiato.toUpperCase()}!* 🎳🎉\n\n` +
-        `Ciao! Sei invitato alla mia festa di compleanno al *Bowling Valdera*!\n\n` +
-        `📅 *Quando:* ${date}\n` +
-        `🕔 *Orario:* ${time}\n` +
-        `📍 *Dove:* Via ToscoRomagnola, 127, Fornacette (PI)\n\n` +
-        `📞 *Info locale:* 0587 420120\n` +
-        `🌐 *Sito:* www.bowlingvaldera.com\n\n` +
-        `Ti aspetto per strike, musica e tanto divertimento! 🍕🎂🎳`;
-
-      // Fix: normalizzazione numero telefono robusta
-      const cleanTel = clientTel.replace(/\D/g, '');
-      let finalTel;
-      if (cleanTel.startsWith('39') && cleanTel.length >= 11) {
-        finalTel = cleanTel;
-      } else if (cleanTel.startsWith('0')) {
-        finalTel = '39' + cleanTel.slice(1);
-      } else {
-        finalTel = '39' + cleanTel;
-      }
-
-      const waUrl = `https://api.whatsapp.com/send?phone=${finalTel}&text=${encodeURIComponent(inviteMsg)}`;
-      window.open(waUrl, '_blank');
-
-      scheduleReset(8000);
+  const backHomeBtn = document.getElementById('btnBackToHome');
+  if (backHomeBtn) {
+    backHomeBtn.addEventListener('click', () => {
+      location.reload();
     });
   }
 
   // ----------------------------------------------------------------
-  // SKIP INVITO
+  // GESTIONE MODAL PRIVACY POLICY
   // ----------------------------------------------------------------
-  const skipInviteBtn = document.getElementById('skipInviteWa');
-  if (skipInviteBtn) {
-    skipInviteBtn.addEventListener('click', () => {
-      scheduleReset(8000);
+  const openPrivacyBtn = document.getElementById('btnOpenPrivacy');
+  const closePrivacyBtn = document.getElementById('btnClosePrivacy');
+  const privacyModal = document.getElementById('privacyModal');
+
+  if (openPrivacyBtn && privacyModal) {
+    openPrivacyBtn.addEventListener('click', () => {
+      privacyModal.style.display = 'flex';
     });
   }
+  if (closePrivacyBtn && privacyModal) {
+    closePrivacyBtn.addEventListener('click', () => {
+      privacyModal.style.display = 'none';
+    });
+  }
+
+  // Chiusura alert con pulsante OK
+  const alertOkBtn = document.getElementById('btnAlertOk');
+  if (alertOkBtn) {
+    alertOkBtn.addEventListener('click', closeCustomAlert);
+  }
+
+  // Chiusura modali cliccando sull'overlay scuro
+  [document.getElementById('customAlert'), privacyModal].forEach(modal => {
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+      });
+    }
+  });
+
+  // Chiusura modali tramite tasto Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeCustomAlert();
+      if (privacyModal) privacyModal.style.display = 'none';
+    }
+  });
 
 }
 
