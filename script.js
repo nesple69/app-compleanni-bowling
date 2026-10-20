@@ -9,21 +9,12 @@ const API_TOKEN = 'BV2026-f8e3a7d2b9c4-k7p1';
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzEwpsUfQzU-1IAOd0c6JPUr_Fct_xL-ivTxpDC7OTAnSSBJu0-DQfS0vNTv8nOrVBgSg/exec';
 
-// Tariffe Bowling per pista
-// Lunedì - Giovedì: 30,00 € / ora
-const PRICE_PER_LANE_WEEKDAY = {
+// Tariffe Bowling per pista (fisse tutti i giorni: 30,00 € / ora a pista)
+const PRICE_PER_LANE = {
   '1h': 30,
   '1.5h': 45,
   '2h': 60,
   '2.5h': 75
-};
-
-// Venerdì, Sabato e Domenica: 35,00 € / ora
-const PRICE_PER_LANE_WEEKEND = {
-  '1h': 35,
-  '1.5h': 52.5,
-  '2h': 70,
-  '2.5h': 87.5
 };
 
 const MAX_PLAYERS_PER_LANE = 6;
@@ -40,30 +31,19 @@ const FRIES_PRICE      = 2.0; // 2,00 €
 const CAKE_PHOTO_PRICE = 5.0;
 
 function getPricePerLaneMap() {
-  const dateStr = document.getElementById('data')?.value;
-  if (!dateStr) return PRICE_PER_LANE_WEEKDAY;
-
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const selectedDate = new Date(year, month - 1, day);
-  const dayOfWeek = selectedDate.getDay(); // 0=Dom, 5=Ven, 6=Sab
-
-  // Venerdì (5), Sabato (6), Domenica (0) -> Weekend (35€/h)
-  const isWeekend = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
-  return isWeekend ? PRICE_PER_LANE_WEEKEND : PRICE_PER_LANE_WEEKDAY;
+  return PRICE_PER_LANE;
 }
 
 function updateDurationLabels() {
-  const priceMap = getPricePerLaneMap();
-  
   const el1h = document.getElementById('price-durata-1h');
   const el15h = document.getElementById('price-durata-1-5h');
   const el2h = document.getElementById('price-durata-2h');
   const el25h = document.getElementById('price-durata-2-5h');
 
-  if (el1h) el1h.textContent = `${priceMap['1h']}€ / Pista`;
-  if (el15h) el15h.textContent = `${priceMap['1.5h'].toString().replace('.', ',')}€ / Pista`;
-  if (el2h) el2h.textContent = `${priceMap['2h']}€ / Pista`;
-  if (el25h) el25h.textContent = `${priceMap['2.5h'].toString().replace('.', ',')}€ / Pista`;
+  if (el1h) el1h.textContent = '30€ / Pista';
+  if (el15h) el15h.textContent = '45€ / Pista';
+  if (el2h) el2h.textContent = '60€ / Pista';
+  if (el25h) el25h.textContent = '75€ / Pista';
 }
 
 

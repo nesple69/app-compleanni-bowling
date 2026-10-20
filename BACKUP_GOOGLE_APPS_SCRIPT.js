@@ -26,8 +26,8 @@ const MENU_PRICES = {
   'Prime': 15.0,
   'Ultra': 18.5
 };
-const PRICE_LANE_WEEKDAY = { '1h': 30.0, '1.5h': 45.0, '2h': 60.0, '2.5h': 75.0 };
-const PRICE_LANE_WEEKEND = { '1h': 35.0, '1.5h': 52.5, '2h': 70.0, '2.5h': 87.5 };
+// Tariffe Bowling fisse per pista (30€ / ora a pista tutti i giorni)
+const PRICE_LANE = { '1h': 30.0, '1.5h': 45.0, '2h': 60.0, '2.5h': 75.0 };
 const PRICE_FRIES        = 2.0;
 const PRICE_CAKE_PHOTO   = 5.0;
 const MAX_PLAYERS_PER_LANE = 6;
@@ -75,16 +75,9 @@ function calculateAuthoritativeTotal(data) {
   const part = parseInt(data.partecipanti, 10) || 0;
   if (part <= 0) return 0;
 
-  const dateParts = (data.data_festa || '').split('-');
-  const isoDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-  const dt = new Date(isoDate + 'T12:00:00');
-  const dayOfWeek = dt.getDay(); // 0=Dom, 5=Ven, 6=Sab
-  const isWeekend = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
-  const laneMap = isWeekend ? PRICE_LANE_WEEKEND : PRICE_LANE_WEEKDAY;
-
   const durationKey = data.durata || '1.5h';
   const lanes = Math.ceil(part / MAX_PLAYERS_PER_LANE);
-  const laneCost = lanes * (laneMap[durationKey] || laneMap['1.5h']);
+  const laneCost = lanes * (PRICE_LANE[durationKey] || 45.0);
 
   const menuPrice = MENU_PRICES[data.menu] !== undefined ? MENU_PRICES[data.menu] : 10.0;
   const friesCost = (data.patatine === 'Sì') ? PRICE_FRIES : 0;
