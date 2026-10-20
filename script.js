@@ -7,7 +7,7 @@
 // come proprietà "API_SECRET" (Impostazioni progetto → Proprietà dello script).
 const API_TOKEN = 'BV2026-f8e3a7d2b9c4-k7p1';
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzEwpsUfQzU-1IAOd0c6JPUr_Fct_xL-ivTxpDC7OTAnSSBJu0-DQfS0vNTv8nOrVBgSg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzo6Nx7xnZtZ0uxNYr7xqAbf8mTXWBKeySlQoM_ScQEOPeuALhsEhzf4BsncriU_RTATw/exec';
 
 // Tariffe Bowling per pista (fisse tutti i giorni: 30,00 € / ora a pista)
 const PRICE_PER_LANE = {
