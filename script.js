@@ -531,23 +531,6 @@ function closeCustomAlert() {
   if (modal) modal.style.display = 'none';
 }
 
-// ------------------------------------------------------------
-// GESTIONE MODALITÀ OPERATORE (FORZATURA PARTECIPANTI > 36)
-// ------------------------------------------------------------
-let isOperatorMode = false;
-
-function activateOperatorMode() {
-  isOperatorMode = true;
-  const partInput = document.getElementById('partecipanti');
-  if (partInput) {
-    partInput.max = 100;
-  }
-  const note = document.getElementById('partecipanti-note');
-  if (note) {
-    note.innerHTML = '<span style="color: #4caf50; font-weight: bold;">🔓 Modalità Operatore attiva: limite di 36 partecipanti sbloccato.</span>';
-  }
-}
-
 
 // ============================================================
 // INIZIALIZZAZIONE — Un unico punto di ingresso
@@ -679,8 +662,8 @@ function init() {
       return;
     }
 
-    if (partNum > 36 && !isOperatorMode) {
-      showCustomAlert('Il numero massimo per le prenotazioni online è di 36 partecipanti (6 piste). Per feste con più di 36 persone, ti invitiamo a contattare il Bowling Valdera al 0587 420120 per verificare la disponibilità di piste extra.');
+    if (partNum > 36) {
+      showCustomAlert('Il numero massimo per le prenotazioni online è di 36 partecipanti (6 piste). Per feste con più di 36 persone, ti invitiamo a contattare il Bowling Valdera al 0587 420120.');
       part.classList.add('shake');
       setTimeout(() => part.classList.remove('shake'), 400);
       return;
@@ -1002,58 +985,6 @@ function init() {
     });
   }
 
-  // ----------------------------------------------------------------
-  // GESTIONE MODAL SBLOCCO OPERATORE (> 36 PARTECIPANTI)
-  // ----------------------------------------------------------------
-  const btnOperatorUnlock = document.getElementById('btnOperatorUnlock');
-  const operatorModal     = document.getElementById('operatorModal');
-  const btnCancelOperator = document.getElementById('btnCancelOperator');
-  const btnConfirmOperator= document.getElementById('btnConfirmOperator');
-  const operatorPinInput  = document.getElementById('operatorPinInput');
-  const operatorPinError  = document.getElementById('operatorPinError');
-
-  // Attivazione automatica se presente ?operatore=true o ?admin=true nell'URL
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.has('operatore') || urlParams.has('admin')) {
-    activateOperatorMode();
-  }
-
-  if (btnOperatorUnlock && operatorModal) {
-    btnOperatorUnlock.addEventListener('click', () => {
-      if (operatorPinInput) operatorPinInput.value = '';
-      if (operatorPinError) operatorPinError.style.display = 'none';
-      operatorModal.style.display = 'flex';
-      if (operatorPinInput) operatorPinInput.focus();
-    });
-  }
-
-  if (btnCancelOperator && operatorModal) {
-    btnCancelOperator.addEventListener('click', () => {
-      operatorModal.style.display = 'none';
-    });
-  }
-
-  if (btnConfirmOperator && operatorPinInput) {
-    const handleUnlock = () => {
-      const pin = operatorPinInput.value.trim().toLowerCase();
-      // PIN validi: 1234, bowling, 2026, valdera
-      if (['1234', 'bowling', '2026', 'valdera'].includes(pin)) {
-        activateOperatorMode();
-        operatorModal.style.display = 'none';
-        showCustomAlert('🔓 Modalità Operatore sbloccata! Ora puoi inserire qualsiasi numero di partecipanti.');
-      } else {
-        if (operatorPinError) operatorPinError.style.display = 'block';
-        operatorPinInput.classList.add('shake');
-        setTimeout(() => operatorPinInput.classList.remove('shake'), 400);
-      }
-    };
-
-    btnConfirmOperator.addEventListener('click', handleUnlock);
-    operatorPinInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleUnlock();
-    });
-  }
-
   // Chiusura alert con pulsante OK
   const alertOkBtn = document.getElementById('btnAlertOk');
   if (alertOkBtn) {
@@ -1061,7 +992,7 @@ function init() {
   }
 
   // Chiusura modali cliccando sull'overlay scuro
-  [document.getElementById('customAlert'), privacyModal, operatorModal].forEach(modal => {
+  [document.getElementById('customAlert'), privacyModal].forEach(modal => {
     if (modal) {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) modal.style.display = 'none';
@@ -1074,7 +1005,6 @@ function init() {
     if (e.key === 'Escape') {
       closeCustomAlert();
       if (privacyModal) privacyModal.style.display = 'none';
-      if (operatorModal) operatorModal.style.display = 'none';
     }
   });
 
