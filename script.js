@@ -879,7 +879,7 @@ function init() {
     }
 
     if (partNum > 36) {
-      showCustomAlert('Il numero massimo per le prenotazioni online è di 36 partecipanti (6 piste). Per feste con più di 36 persone, ti invitiamo a contattare il Bowling Valdera al 0587 420120.');
+      showCustomAlert('Il numero massimo per le prenotazioni online è di 36 partecipanti. Per feste con un numero maggiore di partecipanti, ti invitiamo a contattare il Bowling Valdera al 0587 420120.');
       part.classList.add('shake');
       setTimeout(() => part.classList.remove('shake'), 400);
       return;
