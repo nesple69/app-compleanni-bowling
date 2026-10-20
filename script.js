@@ -52,6 +52,8 @@ function updateDurationLabels() {
 // ============================================================
 
 function startBooking() {
+  const container = document.querySelector('main.container');
+  if (container) container.classList.remove('landing-mode');
   document.getElementById('welcomeStep').style.display = 'none';
   document.getElementById('bookingSteps').style.display = 'block';
   document.querySelector('header').style.display = 'flex';
@@ -832,8 +834,10 @@ function init() {
   updateMinParticipants();
   updateDurationLabels();
 
-  // --- Pulsante start ---
-  document.getElementById('startBookingBtn').addEventListener('click', startBooking);
+  // --- Pulsanti start (Hero e banner inferiore) ---
+  document.querySelectorAll('.start-booking-trigger, #startBookingBtn, #startBookingBtnBottom').forEach(btn => {
+    btn.addEventListener('click', startBooking);
+  });
 
   // ----------------------------------------------------------------
   // NAVIGAZIONE AVANTI
@@ -1030,9 +1034,12 @@ function init() {
     topStepBackBtn.addEventListener('click', () => {
       const currentStep = document.querySelector('.step[style*="display: block"]')?.id;
       if (!currentStep || currentStep === 'step2') {
+        const container = document.querySelector('main.container');
+        if (container) container.classList.add('landing-mode');
         document.getElementById('bookingSteps').style.display = 'none';
         document.getElementById('welcomeStep').style.display  = 'block';
         document.querySelector('header').style.display        = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
       const prevMap = {
