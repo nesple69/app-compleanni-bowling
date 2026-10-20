@@ -48,6 +48,21 @@ function getProps() {
   };
 }
 
+function normalizeDateToIso(dateStr) {
+  if (!dateStr) return '';
+  const parts = String(dateStr).trim().split('-');
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      // Già in formato ISO: YYYY-MM-DD
+      return parts[0] + '-' + (parts[1].length < 2 ? '0' + parts[1] : parts[1]) + '-' + (parts[2].length < 2 ? '0' + parts[2] : parts[2]);
+    } else if (parts[2].length === 4) {
+      // In formato italiano: DD-MM-YYYY -> converti in YYYY-MM-DD
+      return parts[2] + '-' + (parts[1].length < 2 ? '0' + parts[1] : parts[1]) + '-' + (parts[0].length < 2 ? '0' + parts[0] : parts[0]);
+    }
+  }
+  return dateStr;
+}
+
 /** Sanitizza stringhe per prevenire HTML Injection nelle email */
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -120,8 +135,7 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    const dateParts = dateStr.split('-');
-    const isoDate   = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+    const isoDate     = normalizeDateToIso(dateStr);
     const isAvailable = checkCalendarAvailability(isoDate, timeStr, durationHours);
 
     return ContentService
@@ -276,8 +290,7 @@ function doPost(e) {
     }
 
     // 1. Riverifica disponibilità all'interno del blocco con lock
-    const dateParts = (data.data_festa || '').split('-');
-    const isoDate   = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+    const isoDate   = normalizeDateToIso(data.data_festa || '');
     const durationHours = parseFloat(data.durata) || 1.5;
 
     const stillAvailable = checkCalendarAvailability(isoDate, data.ora, durationHours);
@@ -392,8 +405,7 @@ function checkCalendarAvailability(dateStr, timeStr, durationHours) {
 function createCalendarEvent(data, props) {
   if (!props.calendarId) return;
 
-  const dateParts       = data.data_festa.split('-');
-  const isoDate         = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+  const isoDate         = normalizeDateToIso(data.data_festa || '');
   const start           = new Date(isoDate + 'T' + data.ora + ':00');
   const durationInHours = parseFloat(data.durata) || 1.5;
   const end             = new Date(start.getTime() + durationInHours * 60 * 60 * 1000);
