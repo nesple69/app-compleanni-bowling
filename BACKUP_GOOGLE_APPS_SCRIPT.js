@@ -195,24 +195,31 @@ function getMonthAvailability(year, month, durationHours) {
       continue;
     }
 
-    // Controllo chiusure o ferie giornaliere da calendario
+    // Controllo eventi a giorno intero da calendario (qualsiasi evento a giorno intero blocca la giornata)
     const dayStart = new Date(year, month - 1, day, 0, 0, 0);
     const dayEnd   = new Date(year, month - 1, day, 23, 59, 59);
-    let isClosedAllDay = false;
+    let isDayBlocked = false;
+    let blockStatus  = 'full';
+    let blockLabel   = 'Tutto Pieno';
 
     for (let i = 0; i < allEvents.length; i++) {
       const ev = allEvents[i];
-      if (ev.isAllDayEvent() && ev.getStartTime() <= dayEnd && ev.getEndTime() >= dayStart) {
+      if (ev.isAllDayEvent() && ev.getStartTime() < dayEnd && ev.getEndTime() > dayStart) {
+        isDayBlocked = true;
         const title = (ev.getTitle() || '').toUpperCase();
         if (title.indexOf('CHIUSO') !== -1 || title.indexOf('FERIE') !== -1) {
-          isClosedAllDay = true;
-          break;
+          blockStatus = 'closed';
+          blockLabel  = 'Chiuso';
+        } else {
+          blockStatus = 'full';
+          blockLabel  = 'Tutto Pieno';
         }
+        break;
       }
     }
 
-    if (isClosedAllDay) {
-      daysMap[dStr] = { status: 'closed', slots: [], label: 'Chiuso' };
+    if (isDayBlocked) {
+      daysMap[dStr] = { status: blockStatus, slots: [], label: blockLabel };
       continue;
     }
 
@@ -370,15 +377,15 @@ function checkCalendarAvailability(dateStr, timeStr, durationHours) {
     throw new Error('Impossibile accedere al calendario con ID specificato.');
   }
 
-  // 1. Controllo chiusure o ferie giornaliere
+  // 1. Controllo eventi a giorno intero (qualsiasi evento a giorno intero blocca la giornata)
   const dayStart     = new Date(dateStr + 'T00:00:00');
   const dayEnd       = new Date(dateStr + 'T23:59:59');
-  const allDayEvents = calendar.getEvents(dayStart, dayEnd);
+  const dayEvents    = calendar.getEvents(dayStart, dayEnd);
 
-  for (let i = 0; i < allDayEvents.length; i++) {
-    const title = (allDayEvents[i].getTitle() || '').toUpperCase();
-    if (title.includes('CHIUSO') || title.includes('FERIE')) {
-      return false;
+  for (let i = 0; i < dayEvents.length; i++) {
+    const ev = dayEvents[i];
+    if (ev.isAllDayEvent() && ev.getStartTime() < dayEnd && ev.getEndTime() > dayStart) {
+      return false; // Giornata intera occupata da evento all-day su Google Calendar
     }
   }
 
@@ -392,13 +399,7 @@ function checkCalendarAvailability(dateStr, timeStr, durationHours) {
   const checkEnd   = new Date(end.getTime() + bufferMs - 1000);
 
   const overlappingEvents = calendar.getEvents(checkStart, checkEnd);
-
-  // Ignoriamo eventi all-day non di chiusura (es. promemoria o note del personale)
-  const timedConflicts = overlappingEvents.filter(function(ev) {
-    return !ev.isAllDayEvent();
-  });
-
-  return timedConflicts.length === 0;
+  return overlappingEvents.length === 0;
 }
 
 // --- CREAZIONE EVENTO CALENDARIO ---
