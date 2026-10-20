@@ -302,7 +302,13 @@ function createCalendarEvent(data, props) {
 
   const calendar = CalendarApp.getCalendarById(props.calendarId);
   if (calendar) {
-    calendar.createEvent(title, start, end, { description: desc });
+    const event = calendar.createEvent(title, start, end, { description: desc });
+    try {
+      // Imposta il pallino/colore dell'evento su ROSSO
+      event.setColor(CalendarApp.EventColor.RED);
+    } catch (e) {
+      console.warn('Impossibile impostare il colore dell\'evento:', e);
+    }
   }
 }
 
