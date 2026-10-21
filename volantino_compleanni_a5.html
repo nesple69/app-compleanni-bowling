@@ -94,15 +94,28 @@
       height: 210mm;
       max-width: 148mm;
       max-height: 210mm;
-      background: radial-gradient(circle at 50% 10%, #3d1469 0%, #1c0836 45%, #0d021c 100%);
+      background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
       position: relative;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 8mm 9mm 7mm 9mm;
+      padding: 7.5mm 9mm 6.5mm 9mm;
       box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
       border-radius: 4px;
+    }
+
+    /* Immagine fotografica di sfondo autentica del Bowling (uguale alla pagina web) */
+    .flyer-bg-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('assets/background.jpg') center center / cover no-repeat;
+      opacity: 0.32;
+      z-index: 0;
+      pointer-events: none;
     }
 
     /* Pattern decorativo sfondo */
@@ -548,6 +561,7 @@
   <!-- FOGLIO A5 -->
   <div class="a5-flyer">
     <div class="top-accent-bar"></div>
+    <div class="flyer-bg-image"></div>
     <div class="bg-pattern"></div>
 
     <!-- 1. HEADER / TITOLO -->
@@ -702,18 +716,18 @@
     <!-- 5. CALL TO ACTION CON QR CODE -->
     <footer class="flyer-footer">
       <div class="qr-box">
-        <img src="assets/qrcode_booking.png" alt="Inquadra il QR Code per prenotare online" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fapp-compleanni-bowling.vercel.app%2F'">
+        <img src="assets/qrcode_bowlingvaldera.png" alt="Inquadra il QR Code per prenotare online" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fwww.bowlingvaldera.com%2F'">
       </div>
 
       <div class="cta-content">
         <div class="cta-tagline">📲 Prenota Online in 2 Minuti!</div>
         <div class="cta-instruction">
-          <strong>Inquadra il QR Code</strong> con lo smartphone per comporre la tua festa, scoprire le date disponibili e ricevere subito il preventivo trasparente!
+          <strong>Inquadra il QR Code</strong> con lo smartphone per entrare sul sito, scoprire le date libere e ricevere subito il preventivo!
         </div>
         <div class="contact-chips">
           <div class="contact-item">📞 <strong>0587 420120</strong></div>
           <div class="contact-item">📍 <strong>Via Tosco Romagnola 127</strong>, Fornacette (PI)</div>
-          <div class="contact-item">🌐 <strong>app-compleanni-bowling.vercel.app</strong></div>
+          <div class="contact-item">🌐 <strong>www.bowlingvaldera.com</strong></div>
         </div>
       </div>
     </footer>
