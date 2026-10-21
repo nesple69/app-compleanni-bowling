@@ -100,8 +100,9 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 7.5mm 9mm 6.5mm 9mm;
-      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      padding: 6.5mm 8mm 5.5mm 8mm;
+      border: 6px solid #d4a017;
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 160, 23, 0.4);
       border-radius: 4px;
     }
 
@@ -130,16 +131,6 @@
         radial-gradient(circle at 90% 15%, rgba(0, 210, 255, 0.08) 0%, transparent 12%),
         radial-gradient(circle at 80% 80%, rgba(255, 0, 128, 0.06) 0%, transparent 15%);
       pointer-events: none;
-    }
-
-    /* Striscia superiore di accento colorato */
-    .top-accent-bar {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #ff007f, #ffd700, #00d2ff, #7928ca);
     }
 
     /* =========================================================
@@ -567,6 +558,7 @@
         max-width: 148mm !important;
         max-height: 210mm !important;
         margin: 0 !important;
+        border: 6px solid #d4a017 !important;
         box-shadow: none !important;
         border-radius: 0 !important;
         page-break-inside: avoid !important;
@@ -591,7 +583,6 @@
 
   <!-- FOGLIO A5 -->
   <div class="a5-flyer">
-    <div class="top-accent-bar"></div>
     <div class="flyer-bg-image"></div>
     <div class="bg-pattern"></div>
 
