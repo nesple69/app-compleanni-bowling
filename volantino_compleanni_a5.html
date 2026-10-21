@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&family=Lobster&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Montserrat:ital,wght@0,600;0,700;0,800;0,900&family=Titan+One&display=swap"
     rel="stylesheet">
 
   <style>
@@ -180,27 +180,44 @@
     }
 
     .hero-title {
-      font-size: 15.5pt;
-      font-weight: 900;
+      font-family: 'Lilita One', 'Titan One', cursive, sans-serif;
+      font-size: 18pt;
+      font-weight: normal;
       line-height: 1.15;
       text-transform: uppercase;
-      letter-spacing: -0.2px;
+      letter-spacing: 0.8px;
       color: #ffffff;
-      text-shadow: 0 3px 12px rgba(0, 0, 0, 0.6);
+      text-shadow: 
+        0 2px 0 #1f083d,
+        0 4px 0 #120324,
+        0 6px 14px rgba(0, 0, 0, 0.95);
+      margin: 1mm 0 1.5mm 0;
     }
 
-    .hero-title span.highlight {
-      background: linear-gradient(135deg, #ffd700, #ff8c00);
+    .hero-title .highlight-strike {
+      display: inline-block;
+      font-family: 'Lilita One', 'Titan One', cursive, sans-serif;
+      font-size: 21pt;
+      background: linear-gradient(180deg, #fff700 0%, #ff9500 45%, #ff0055 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 2px 0 #4a0555) drop-shadow(0 4px 0 #18021c);
+      transform: rotate(-3deg) scale(1.08);
+      margin: 0 4px;
+      letter-spacing: 1.2px;
     }
 
-    .hero-subtitle {
-      font-size: 7.8pt;
-      color: #dfd7f5;
-      font-weight: 500;
-      margin-top: 1mm;
-      line-height: 1.3;
+    .hero-subtitle-pill {
+      display: inline-block;
+      background: #190c2e;
+      border: 1.5px solid #ffd700;
+      border-radius: 20px;
+      padding: 1.2mm 4mm;
+      font-size: 7pt;
+      color: #ffffff;
+      font-weight: 700;
+      line-height: 1.2;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
     }
 
     /* =========================================================
@@ -580,11 +597,13 @@
         <span class="badge-top">🎳 Feste di Compleanno per Bambini & Ragazzi</span>
       </div>
       <h1 class="hero-title">
-        La Festa più <span class="highlight">Strike</span> che Ci Sia!
+        La Festa più <span class="highlight-strike">STRIKE</span> che Ci Sia!
       </h1>
-      <p class="hero-subtitle">
-        Piste con sponde per tutti, gran buffet caldo, torta artigianale con candeline e zero stress per i genitori!
-      </p>
+      <div>
+        <span class="hero-subtitle-pill">
+          🎳 Piste Bumper per tutti • 🍕 Buffet caldo • 🎂 Torta inclusa • ✨ Zero stress genitori!
+        </span>
+      </div>
     </header>
 
     <!-- 2. I 4 SUPER PUNTI DI FORZA -->
