@@ -1,0 +1,77 @@
+========================================================================
+APP PRENOTAZIONE COMPLEANNI - BOWLING VALDERA
+Pacchetto Aggiornato per Mattia (Sviluppatore Web)
+Data: 20 Ottobre 2026
+========================================================================
+
+Ciao Mattia!
+Questo archivio contiene il codice sorgente completo e aggiornato dell'App Compleanni per il Bowling Valdera.
+
+------------------------------------------------------------------------
+1. COSA C'È DI NUOVO IN QUESTA VERSIONE
+------------------------------------------------------------------------
+- NUOVA LANDING PAGE MARKETING (#welcomeStep):
+  La schermata iniziale accoglie i genitori con una landing page accattivante e orientata alla conversione:
+  * Hero con call-to-action immediata ("Componi la Tua Festa in 2 Minuti")
+  * Trust badge (Piste riservate, 5 Menu a buffet, Torta artigianale inclusa, Biglietto WhatsApp in regalo)
+  * Sezione "L'Esperienza Compleanno": Piste & Sponde Bumper, Buffet goloso, Taglio torta
+  * Vetrina Pacchetti Cibo: Basic (10€), Smart (12,50€), Plus (11,50€), Prime (15€), Ultra (18,50€)
+  * Banner Tariffe Bowling: 30€/h fisse tutti i giorni (1h: 30€, 1.5h: 45€, 2h: 60€, 2.5h: 75€)
+  * Spotlight sul Biglietto Digitale d'Invito WhatsApp generato automaticamente in omaggio
+  * Perché Sceglierci: Sicurezza bambini, allergeni/celiachia, zero stress per i genitori, parcheggio
+  * Selettore data con Calendario Interattivo mensile mobile-friendly con pallini di disponibilità
+
+- LOGICA PISTE E PARTECIPANTI:
+  * 1 pista ogni 6 partecipanti (es. 1-6 = 1 pista, 7-12 = 2 piste, ..., fino a 36 partecipanti = 6 piste).
+  * Limite massimo prenotabile online: 36 partecipanti (per gruppi maggiori la direzione forza l'evento direttamente da Google Calendar).
+  * Calcolo automatico del costo piste: Numero Piste x Costo della durata scelta (30€ / 45€ / 60€ / 75€).
+
+------------------------------------------------------------------------
+2. ARCHITETTURA DEL PROGETTO
+------------------------------------------------------------------------
+- FRONTEND:
+  Single Page Application (SPA) realizzata in HTML5, CSS3 moderno (glassmorphism, responsive per smartphone, tablet e desktop) e JavaScript vanilla ES6+. Zero dipendenze esterne bloccanti.
+
+- BACKEND / DATABASE:
+  Il backend risiede su Google Apps Script (collegato all'account Google di Bowling Valdera).
+  - Database: Google Sheets (Foglio: "dati_compleanno")
+  - Calendario: Google Calendar (creazione automatica eventi con colore Rosso e verifica disponibilità piste)
+  - Notifiche Email: Spedizione automatica da info@bowlingvaldera.it con conferma al cliente e notifica alla sede.
+
+------------------------------------------------------------------------
+3. STRUTTURA DEI FILE
+------------------------------------------------------------------------
+├── index.html                  -> Pagina principale con Landing Page + Wizard di prenotazione
+├── style.css                   -> Fogli di stile completi e responsive (glassmorphism + visual card)
+├── script.js                   -> Logica frontend: calcolo prezzi, calendario disponibilità real-time, canvas invito WhatsApp
+├── manifest.json               -> Manifest per supporto PWA (installabile su smartphone)
+├── assets/                     -> Loghi, illustrazioni di sfondo bowling, grafiche di decorazione
+├── French-Stencil-Serif*.ttf   -> Font ufficiali del brand Bowling Valdera
+├── Lobster-Regular.ttf         -> Font decorativo per titoli/biglietto
+├── BACKUP_GOOGLE_APPS_SCRIPT.js-> Codice sorgente completo del backend Google Apps Script (Code.gs)
+├── README_BACKUP.md            -> Documentazione tecnica e mappatura colonne Google Sheets
+└── AUDIT_TECNICO_APP_COMPLEANNI.md -> Report tecnico del sistema
+
+------------------------------------------------------------------------
+4. CONFIGURAZIONE BACKEND GIÀ ATTIVA
+------------------------------------------------------------------------
+In script.js è già configurato l'endpoint live attivo e verificato:
+SCRIPT_URL:
+https://script.google.com/macros/s/AKfycbxr_arZy4ZKIVtlUdUkPbkNhmCO31509qOAeVqXwodAaQE-4wZ0g4UGHvT6IOVph31BBQ/exec
+
+Token di sicurezza condiviso (API_TOKEN):
+BV2026-f8e3a7d2b9c4-k7p1
+
+------------------------------------------------------------------------
+5. COME INTEGRARE L'APP
+------------------------------------------------------------------------
+A) Nel sito principale:
+   - Può essere ospitata come cartella statica (es. bowlingvaldera.it/compleanni/)
+   - Oppure integrata tramite iframe responsive:
+     <iframe src="percorso/index.html" width="100%" height="900" frameborder="0"></iframe>
+
+B) Test locale:
+   - È sufficiente fare doppio clic su index.html per aprirlo in qualsiasi browser.
+
+Per qualsiasi chiarimento fa riferimento a README_BACKUP.md e AUDIT_TECNICO_APP_COMPLEANNI.md.
+========================================================================
