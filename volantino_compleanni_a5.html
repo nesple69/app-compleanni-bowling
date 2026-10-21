@@ -8,12 +8,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Montserrat:ital,wght@0,600;0,700;0,800;0,900&family=Titan+One&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Montserrat:ital,wght@0,600;0,700;0,800;0,900;1,700&display=swap"
     rel="stylesheet">
 
   <style>
     /* =========================================================
        RESET & IMPOSTAZIONI STAMPA A5 (148 x 210 mm)
+       PALETTE CHIARA RETRO-ARCADE (Ispirata al flyer ufficiale)
        ========================================================= */
     *, *::before, *::after {
       box-sizing: border-box;
@@ -30,9 +31,9 @@
     }
 
     body {
-      background: #110822;
+      background: #e2d9cc;
       font-family: 'Montserrat', sans-serif;
-      color: #ffffff;
+      color: #1e293b;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -40,12 +41,12 @@
       padding: 20px;
     }
 
-    /* Barra di controllo a schermo (scompare in stampa) */
+    /* Barra comandi a video (scompare in stampa) */
     .screen-toolbar {
       width: 100%;
       max-width: 580px;
-      background: #251347;
-      border: 1px solid rgba(255, 215, 0, 0.3);
+      background: #ffffff;
+      border: 2px solid #d97706;
       padding: 12px 18px;
       border-radius: 12px;
       margin-bottom: 20px;
@@ -53,221 +54,204 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     }
 
     .screen-toolbar .info-text {
       font-size: 0.9rem;
-      color: #e0d5ff;
+      color: #334155;
     }
 
     .screen-toolbar .info-text strong {
-      color: #ffd700;
+      color: #d92518;
     }
 
     .btn-print {
-      background: linear-gradient(135deg, #ff007f, #ff7b00);
+      background: linear-gradient(135deg, #d92518, #ea580c);
       color: #ffffff;
       font-weight: 800;
       font-size: 0.95rem;
-      padding: 10px 20px;
+      padding: 10px 22px;
       border-radius: 30px;
       border: none;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 4px 15px rgba(255, 0, 127, 0.4);
+      box-shadow: 0 4px 15px rgba(217, 37, 24, 0.35);
       transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .btn-print:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(255, 0, 127, 0.6);
+      box-shadow: 0 6px 20px rgba(217, 37, 24, 0.5);
     }
 
     /* =========================================================
-       FOGLIO A5 (148mm x 210mm)
+       FOGLIO A5 (148mm x 210mm) — BASE CHIARA CON CORNICE OCRA
        ========================================================= */
     .a5-flyer {
       width: 148mm;
       height: 210mm;
       max-width: 148mm;
       max-height: 210mm;
-      background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+      background: #fff8ee;
       position: relative;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 6.5mm 8mm 5.5mm 8mm;
-      border: 6px solid #d4a017;
-      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 160, 23, 0.4);
-      border-radius: 4px;
+      padding: 5.5mm 7mm 5mm 7mm;
+      border: 6px solid #d97706; /* Cornice Giallo Ocra 6px */
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.25);
+      border-radius: 3px;
     }
 
-    /* Immagine fotografica di sfondo autentica del Bowling (uguale alla pagina web) */
-    .flyer-bg-image {
+    /* Raggi solari retro crema & arancio caldo */
+    .bg-retro-rays {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: url('assets/background.jpg') center center / cover no-repeat;
-      opacity: 0.20;
+      top: -30mm;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 250mm;
+      height: 250mm;
+      background: repeating-conic-gradient(
+        from 0deg,
+        rgba(245, 158, 11, 0.08) 0deg 10deg,
+        transparent 10deg 20deg
+      );
+      pointer-events: none;
       z-index: 0;
-      pointer-events: none;
     }
 
-    /* Pattern decorativo sfondo */
-    .bg-pattern {
+    /* Stelline decorative stile vintage */
+    .sparkle {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-image: 
-        radial-gradient(circle at 10% 20%, rgba(255, 215, 0, 0.08) 0%, transparent 8%),
-        radial-gradient(circle at 90% 15%, rgba(0, 210, 255, 0.08) 0%, transparent 12%),
-        radial-gradient(circle at 80% 80%, rgba(255, 0, 128, 0.06) 0%, transparent 15%);
+      color: #f59e0b;
+      font-size: 10pt;
       pointer-events: none;
+      z-index: 0;
+      user-select: none;
     }
+    .sp-1 { top: 7mm; left: 10mm; font-size: 14pt; color: #ea580c; }
+    .sp-2 { top: 9mm; right: 10mm; font-size: 13pt; color: #f59e0b; }
+    .sp-3 { top: 48mm; left: 4mm; font-size: 10pt; color: #d97706; }
+    .sp-4 { top: 52mm; right: 5mm; font-size: 11pt; color: #ea580c; }
 
     /* =========================================================
-       1. HEADER / HERO BRAND
+       1. HEADER / TITOLO RETRO-ARCADE
        ========================================================= */
     .flyer-header {
       position: relative;
+      z-index: 1;
       text-align: center;
-      margin-bottom: 2.5mm;
-    }
-
-    .brand-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
       margin-bottom: 2mm;
     }
 
-    .brand-logo {
-      height: 12mm;
-      width: auto;
-      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
-    }
-
-    .badge-top {
+    .brand-top-pill {
       display: inline-block;
-      background: rgba(255, 215, 0, 0.15);
-      border: 1px solid #ffd700;
-      color: #ffd700;
-      font-size: 7.5pt;
-      font-weight: 800;
-      letter-spacing: 1px;
-      padding: 2px 10px;
-      border-radius: 20px;
+      font-size: 8.5pt;
+      font-weight: 900;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
+      color: #c2410c;
       margin-bottom: 1.5mm;
     }
 
-    .hero-title {
-      font-family: 'Lilita One', 'Titan One', cursive, sans-serif;
-      font-size: 18pt;
-      font-weight: normal;
-      line-height: 1.15;
+    .hero-main-title {
+      font-family: 'Lilita One', cursive, sans-serif;
+      font-size: 23pt;
+      line-height: 1;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: #ffffff;
+      letter-spacing: 0.5px;
+      color: #d92518;
       text-shadow: 
-        0 2px 0 #1f083d,
-        0 4px 0 #120324,
-        0 6px 14px rgba(0, 0, 0, 0.95);
-      margin: 1mm 0 1.5mm 0;
+        0 2.5px 0 #7f1d1d,
+        0 4.5px 0 #450a0a,
+        0 8px 12px rgba(69, 10, 10, 0.25);
+      margin-bottom: 2mm;
     }
 
-    .hero-title .highlight-strike {
-      display: inline-block;
-      font-family: 'Lilita One', 'Titan One', cursive, sans-serif;
-      font-size: 21pt;
-      color: #ffea00;
+    .hero-main-title span.strike-word {
+      color: #f59e0b;
       text-shadow: 
-        -1.5px -1.5px 0 #ff0055,  
-         1.5px -1.5px 0 #ff0055,
-        -1.5px  1.5px 0 #ff0055,
-         1.5px  1.5px 0 #ff0055,
-         0px  3px 0 #990033,
-         0px  5px 0 #4d0018,
-         0px  7px 14px rgba(0, 0, 0, 0.95);
-      transform: rotate(-3deg) scale(1.08);
-      margin: 0 4px;
-      letter-spacing: 1.5px;
+        0 2.5px 0 #b45309,
+        0 4.5px 0 #78350f,
+        0 8px 12px rgba(120, 53, 15, 0.25);
     }
 
-    .hero-subtitle-pill {
+    /* Nastro nero / blu notte curvo tipo "SCALA LA CLASSIFICA" */
+    .ribbon-banner {
       display: inline-block;
-      background: #190c2e;
-      border: 1.5px solid #ffd700;
-      border-radius: 20px;
-      padding: 1.2mm 4mm;
-      font-size: 7pt;
+      background: #182230;
       color: #ffffff;
-      font-weight: 700;
-      line-height: 1.2;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+      font-weight: 900;
+      font-size: 8.8pt;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 1.8mm 7mm;
+      border-radius: 4px;
+      box-shadow: 0 4px 10px rgba(24, 34, 48, 0.35);
+      position: relative;
+    }
+
+    .ribbon-banner span.gold-text {
+      color: #fbbf24;
     }
 
     /* =========================================================
-       2. I 4 SUPER PUNTI DI FORZA (GRID COMPATTA)
+       2. I 4 SUPER PUNTI DI FORZA (CARD CHIARE E CONTRASTATE)
        ========================================================= */
     .features-grid {
       position: relative;
+      z-index: 1;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 2.2mm;
-      margin-bottom: 2.5mm;
+      gap: 2mm;
+      margin-bottom: 2.2mm;
     }
 
     .feat-card {
-      background: #190c2e;
-      border: 1.5px solid #ffd700;
+      background: #ffffff;
+      border: 1.5px solid #fcd34d;
       border-radius: 8px;
-      padding: 2.2mm 2.6mm;
+      padding: 2.2mm 2.5mm;
       display: flex;
       align-items: flex-start;
       gap: 2.4mm;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.85);
+      box-shadow: 0 2px 6px rgba(217, 119, 6, 0.12);
     }
 
     .feat-icon-box {
       width: 7.5mm;
       height: 7.5mm;
-      border-radius: 6px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 11pt;
       flex-shrink: 0;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
     }
 
-    .icon-bowling { background: linear-gradient(135deg, #ff007f, #99004d); }
-    .icon-food    { background: linear-gradient(135deg, #ff8c00, #b35900); }
-    .icon-cake    { background: linear-gradient(135deg, #ffd700, #b39500); }
-    .icon-invite  { background: linear-gradient(135deg, #00d2ff, #006699); }
+    .icon-bowling { background: linear-gradient(135deg, #ef4444, #b91c1c); color: #fff; }
+    .icon-food    { background: linear-gradient(135deg, #f97316, #c2410c); color: #fff; }
+    .icon-cake    { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+    .icon-invite  { background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; }
 
     .feat-text h4 {
-      font-size: 8.4pt;
+      font-size: 8.2pt;
       font-weight: 800;
-      color: #ffd700;
+      color: #0f172a;
       line-height: 1.15;
-      margin-bottom: 0.8mm;
+      margin-bottom: 0.5mm;
     }
 
     .feat-text p {
-      font-size: 6.8pt;
-      color: #ffffff;
+      font-size: 6.4pt;
+      color: #334155;
       font-weight: 600;
-      line-height: 1.3;
+      line-height: 1.25;
     }
 
     /* =========================================================
@@ -275,12 +259,13 @@
        ========================================================= */
     .packages-section {
       position: relative;
-      background: #140827;
-      border: 2px solid #ffd700;
+      z-index: 1;
+      background: #ffffff;
+      border: 2px solid #d97706;
       border-radius: 9px;
-      padding: 2.8mm 3mm;
-      margin-bottom: 2.5mm;
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.9);
+      padding: 2.5mm 3mm;
+      margin-bottom: 2.2mm;
+      box-shadow: 0 4px 12px rgba(217, 119, 6, 0.14);
     }
 
     .section-mini-header {
@@ -288,16 +273,16 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 2mm;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+      border-bottom: 1.5px dashed #fcd34d;
       padding-bottom: 1.2mm;
     }
 
     .section-mini-title {
-      font-size: 8.5pt;
+      font-size: 8.8pt;
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: #ffd700;
+      color: #b45309;
       display: flex;
       align-items: center;
       gap: 5px;
@@ -305,12 +290,13 @@
 
     .section-mini-badge {
       font-size: 6.2pt;
-      font-weight: 700;
-      background: rgba(0, 210, 255, 0.25);
-      border: 1px solid #00d2ff;
-      color: #00d2ff;
-      padding: 1px 6px;
-      border-radius: 10px;
+      font-weight: 800;
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      color: #b45309;
+      padding: 1.5px 7px;
+      border-radius: 12px;
+      text-transform: uppercase;
     }
 
     .packages-row {
@@ -320,143 +306,150 @@
     }
 
     .pkg-mini-card {
-      background: #24133f;
-      border: 1.5px solid rgba(255, 255, 255, 0.22);
+      background: #fffdfa;
+      border: 1.5px solid #fde68a;
       border-radius: 6px;
       padding: 2mm 1.5mm;
       text-align: center;
       position: relative;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
     }
 
     .pkg-mini-card.popular {
-      background: #321658;
-      border: 2px solid #ffd700;
-      box-shadow: 0 0 14px rgba(255, 215, 0, 0.45);
+      background: #fffbeb;
+      border: 2px solid #ea580c;
+      box-shadow: 0 0 10px rgba(234, 88, 12, 0.25);
     }
 
     .pop-tag {
       position: absolute;
-      top: -4px;
+      top: -5px;
       left: 50%;
       transform: translateX(-50%);
-      background: #ffd700;
-      color: #1a0833;
+      background: #ea580c;
+      color: #ffffff;
       font-size: 5pt;
       font-weight: 900;
-      padding: 0.5px 4px;
+      padding: 0.8px 5px;
       border-radius: 4px;
       text-transform: uppercase;
       white-space: nowrap;
     }
 
     .pkg-name {
-      font-size: 7.5pt;
+      font-size: 7.6pt;
       font-weight: 900;
-      color: #ffffff;
-      margin-bottom: 1mm;
+      color: #0f172a;
+      margin-bottom: 0.8mm;
       text-transform: uppercase;
-      letter-spacing: 0.2px;
     }
 
     .pkg-price {
       font-size: 9.6pt;
       font-weight: 900;
-      color: #ffd700;
+      color: #d92518;
       line-height: 1;
       margin-bottom: 1.2mm;
     }
 
     .pkg-price small {
-      font-size: 5.5pt;
-      color: #dfd5f5;
+      font-size: 5.4pt;
+      color: #64748b;
       font-weight: 700;
       display: block;
     }
 
     .pkg-details {
-      font-size: 6pt;
-      color: #ffffff;
+      font-size: 5.9pt;
+      color: #334155;
       font-weight: 600;
-      line-height: 1.3;
+      line-height: 1.25;
       text-align: center;
     }
 
     .pkg-details span {
       display: block;
-      color: #00ffaa;
+      color: #16a34a;
       font-weight: 800;
-      margin-top: 2px;
+      margin-top: 1.5px;
     }
 
     /* Striscia tariffa pista bowling */
     .bowling-rate-banner {
       margin-top: 2.2mm;
-      background: #231240;
-      border: 1.5px dashed #ffd700;
+      background: #f8fafc;
+      border: 1.5px dashed #cbd5e1;
       border-radius: 6px;
       padding: 1.6mm 3mm;
       display: flex;
       align-items: center;
       justify-content: space-between;
       font-size: 7pt;
-      color: #ffffff;
+      color: #1e293b;
     }
 
     .bowling-rate-banner strong {
-      color: #ffd700;
-      font-weight: 800;
+      color: #d92518;
+      font-weight: 900;
     }
 
     .bowling-rate-banner span.tag-lane {
-      background: #ff007f;
-      color: #fff;
+      background: #182230;
+      color: #ffd700;
       font-weight: 800;
       font-size: 6pt;
-      padding: 1px 6px;
+      padding: 1.5px 7px;
       border-radius: 4px;
       text-transform: uppercase;
     }
 
     /* =========================================================
-       4. PERCHÉ I GENITORI CI SCELGONO (ZERO STRESS)
+       4. PERCHÉ I GENITORI CI SCELGONO (BADGES CIRCOLARI RETRO)
        ========================================================= */
     .parent-perks-bar {
       position: relative;
+      z-index: 1;
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 1.5mm;
-      margin-bottom: 2.5mm;
+      margin-bottom: 2.2mm;
     }
 
     .perk-item {
-      background: #190c2e;
+      background: #ffffff;
       border-radius: 6px;
-      padding: 2mm 1.5mm;
+      padding: 1.8mm 1.5mm;
       text-align: center;
-      border: 1.5px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+      border: 1.5px solid #fed7aa;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
     }
 
-    .perk-emoji {
+    .perk-icon-circle {
+      width: 7mm;
+      height: 7mm;
+      border-radius: 50%;
+      background: #fff7ed;
+      border: 1.5px solid #ea580c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1mm auto;
       font-size: 9pt;
-      display: block;
-      margin-bottom: 0.8mm;
     }
 
     .perk-title {
-      font-size: 7pt;
+      font-size: 6.8pt;
       font-weight: 800;
-      color: #ffd700;
+      color: #0f172a;
       line-height: 1.15;
     }
 
     .perk-desc {
-      font-size: 5.8pt;
-      color: #ffffff;
+      font-size: 5.5pt;
+      color: #475569;
       font-weight: 600;
-      line-height: 1.25;
-      margin-top: 0.6mm;
+      line-height: 1.2;
+      margin-top: 0.5mm;
     }
 
     /* =========================================================
@@ -464,28 +457,47 @@
        ========================================================= */
     .flyer-footer {
       position: relative;
-      background: #140827;
-      border: 2px solid #ffd700;
+      z-index: 1;
+      background: #ffffff;
+      border: 2px solid #d92518;
       border-radius: 9px;
-      padding: 2.8mm 3.2mm;
+      padding: 2.6mm 3.2mm;
       display: flex;
       align-items: center;
       gap: 3.5mm;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.9);
+      box-shadow: 0 4px 14px rgba(217, 37, 24, 0.15);
+    }
+
+    .qr-box-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .qr-badge-point {
+      font-size: 5.6pt;
+      font-weight: 900;
+      color: #d92518;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 1mm;
+      display: flex;
+      align-items: center;
+      gap: 2px;
     }
 
     .qr-box {
       width: 22mm;
       height: 22mm;
       background: #ffffff;
+      border: 1.5px solid #e2e8f0;
       border-radius: 6px;
-      padding: 1.5mm;
+      padding: 1.2mm;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     }
 
     .qr-box img {
@@ -499,32 +511,33 @@
     }
 
     .cta-tagline {
-      font-size: 9pt;
+      font-size: 9.4pt;
       font-weight: 900;
       text-transform: uppercase;
-      color: #ffd700;
+      color: #d92518;
       line-height: 1.15;
-      margin-bottom: 1mm;
+      margin-bottom: 0.8mm;
       letter-spacing: -0.2px;
     }
 
     .cta-instruction {
       font-size: 6.5pt;
-      color: #ffffff;
+      color: #334155;
+      font-weight: 600;
       line-height: 1.3;
-      margin-bottom: 1.8mm;
+      margin-bottom: 1.6mm;
     }
 
     .cta-instruction strong {
-      color: #00ffcc;
+      color: #ea580c;
     }
 
     .contact-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 1.8mm 3mm;
-      font-size: 6.4pt;
-      color: #f1edfb;
+      gap: 1.5mm 3mm;
+      font-size: 6.5pt;
+      color: #1e293b;
     }
 
     .contact-item {
@@ -534,7 +547,18 @@
     }
 
     .contact-item strong {
-      color: #ffd700;
+      color: #d92518;
+    }
+
+    /* Striscia fondo pagina */
+    .flyer-bottom-strip {
+      text-align: center;
+      font-size: 5.8pt;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: #c2410c;
+      margin-top: 1.5mm;
     }
 
     /* =========================================================
@@ -558,7 +582,7 @@
         max-width: 148mm !important;
         max-height: 210mm !important;
         margin: 0 !important;
-        border: 6px solid #d4a017 !important;
+        border: 6px solid #d97706 !important;
         box-shadow: none !important;
         border-radius: 0 !important;
         page-break-inside: avoid !important;
@@ -573,8 +597,8 @@
   <!-- BARRA DI CONTROLLO SU SCHERMO (Non stampata) -->
   <div class="screen-toolbar">
     <div class="info-text">
-      <strong>Volantino A5 Bowling Valdera (148 x 210 mm)</strong><br>
-      Grafica ufficiale compleanni con QR Code per prenotazione online
+      <strong>Volantino A5 Bowling Valdera (148 x 210 mm)</strong> — Nuova Palette Chiara Retro-Arcade<br>
+      Massima leggibilità e risparmio inchiostro, con QR Code attivo per <strong>bowlingvaldera.com</strong>
     </div>
     <button class="btn-print" onclick="window.print()">
       🖨️ Stampa Volantino (A5)
@@ -583,22 +607,22 @@
 
   <!-- FOGLIO A5 -->
   <div class="a5-flyer">
-    <div class="flyer-bg-image"></div>
-    <div class="bg-pattern"></div>
+    <div class="bg-retro-rays"></div>
+    <span class="sparkle sp-1">✦</span>
+    <span class="sparkle sp-2">✦</span>
+    <span class="sparkle sp-3">★</span>
+    <span class="sparkle sp-4">★</span>
 
-    <!-- 1. HEADER / TITOLO -->
+    <!-- 1. HEADER / TITOLO RETRO-ARCADE -->
     <header class="flyer-header">
-      <div class="brand-row">
-        <img src="assets/logo_bowling.png" alt="Bowling Valdera" class="brand-logo" onerror="this.style.display='none'">
-        <span class="badge-top">🎳 Feste di Compleanno per Bambini & Ragazzi</span>
+      <div class="brand-top-pill">
+        • BOWLING VALDERA •
       </div>
-      <h1 class="hero-title">
-        La Festa più <span class="highlight-strike">STRIKE</span> che Ci Sia!
+      <h1 class="hero-main-title">
+        FESTE DI COMPLEANNO
       </h1>
-      <div>
-        <span class="hero-subtitle-pill">
-          🎳 Piste Bumper per tutti • 🍕 Buffet caldo • 🎂 Torta inclusa • ✨ Zero stress genitori!
-        </span>
+      <div class="ribbon-banner">
+        ★ LA PIÙ <span class="gold-text">STRIKE</span> CHE CI SIA! ★
       </div>
     </header>
 
@@ -675,7 +699,7 @@
           <div class="pkg-name">Plus</div>
           <div class="pkg-price">11,50€ <small>/ pers.</small></div>
           <div class="pkg-details">
-            1 Trancio Focaccia Cotto/Mozzarella<br>
+            1 Trancio Focaccia Cotto/Mozz.<br>
             Bibita a scelta<br>
             <span>🎂 Torta Inclusa</span>
           </div>
@@ -713,25 +737,25 @@
       </div>
     </section>
 
-    <!-- 4. PERCHÉ I GENITORI CI AMANO -->
+    <!-- 4. PERCHÉ I GENITORI CI SCELGONO (BADGES RETRO) -->
     <section class="parent-perks-bar">
       <div class="perk-item">
-        <span class="perk-emoji">✨</span>
+        <div class="perk-icon-circle">✨</div>
         <div class="perk-title">Zero Stress</div>
         <div class="perk-desc">Allestimento e pulizia ci pensa lo staff!</div>
       </div>
       <div class="perk-item">
-        <span class="perk-emoji">🛡️</span>
+        <div class="perk-icon-circle">🛡️</div>
         <div class="perk-title">100% Sicuro</div>
         <div class="perk-desc">Sponde protettive e piste riservate</div>
       </div>
       <div class="perk-item">
-        <span class="perk-emoji">🌱</span>
+        <div class="perk-icon-circle">🌱</div>
         <div class="perk-title">Allergie</div>
         <div class="perk-desc">Opzioni attente per intolleranze alimentari</div>
       </div>
       <div class="perk-item">
-        <span class="perk-emoji">🚗</span>
+        <div class="perk-icon-circle">🚗</div>
         <div class="perk-title">Parcheggio</div>
         <div class="perk-desc">Ampio spazio auto gratuito davanti all'ingresso</div>
       </div>
@@ -739,8 +763,11 @@
 
     <!-- 5. CALL TO ACTION CON QR CODE -->
     <footer class="flyer-footer">
-      <div class="qr-box">
-        <img src="assets/qrcode_bowlingvaldera.png" alt="Inquadra il QR Code per prenotare online" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fwww.bowlingvaldera.com%2F'">
+      <div class="qr-box-wrapper">
+        <div class="qr-badge-point">➤ INQUADRA QUI ➤</div>
+        <div class="qr-box">
+          <img src="assets/qrcode_bowlingvaldera.png" alt="Inquadra il QR Code per prenotare online" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fwww.bowlingvaldera.com%2F'">
+        </div>
       </div>
 
       <div class="cta-content">
@@ -755,6 +782,11 @@
         </div>
       </div>
     </footer>
+
+    <!-- Striscia fondo pagina -->
+    <div class="flyer-bottom-strip">
+      FACILE • VELOCE • ZERO PENSIERI PER I GENITORI
+    </div>
 
   </div>
 
