@@ -46,6 +46,32 @@ function updateDurationLabels() {
   if (el25h) el25h.textContent = '75€ / Pista';
 }
 
+/**
+ * Controllo festività chiuse obbligatoriamente di default:
+ * Solo Natale (25 dic), S. Stefano (26 dic), Capodanno (1 gen), Pasqua e Pasquetta.
+ * Tutti gli altri festivi sono aperti salvo evento "CHIUSO" segnato su Google Calendar.
+ */
+function isClosedHoliday(year, month, day) {
+  // Feste fisse
+  if ((month === 1 && day === 1) || (month === 12 && (day === 25 || day === 26))) {
+    return true;
+  }
+  // Pasqua e Pasquetta (algoritmo astronomico gregoriano Meeus/Jones/Butcher)
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const easterMonth = Math.floor((h + l - 7 * m + 114) / 31);
+  const easterDay = ((h + l - 7 * m + 114) % 31) + 1;
+
+  if (month === easterMonth && day === easterDay) return true; // Pasqua
+
+  const mondayDate = new Date(year, easterMonth - 1, easterDay + 1);
+  if (month === (mondayDate.getMonth() + 1) && day === mondayDate.getDate()) return true; // Pasquetta
+
+  return false;
+}
+
 
 // ============================================================
 // NAVIGAZIONE
@@ -631,9 +657,8 @@ async function checkAvailability() {
     return;
   }
 
-  const holidays = ['1-1', '6-1', '25-4', '1-5', '2-6', '15-8', '1-11', '8-12', '25-12', '26-12'];
-  if (holidays.includes(`${d}-${m}`)) {
-    showUnavailable('Spiacenti, non accettiamo compleanni nei giorni festivi.');
+  if (isClosedHoliday(year, m, d)) {
+    showUnavailable('Spiacenti, non accettiamo compleanni in questa festività (Natale, S. Stefano, Capodanno, Pasqua e Pasquetta).');
     return;
   }
 

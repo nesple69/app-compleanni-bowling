@@ -63,6 +63,32 @@ function normalizeDateToIso(dateStr) {
   return dateStr;
 }
 
+/**
+ * Controllo festività chiuse obbligatoriamente di default:
+ * Solo Natale (25 dic), S. Stefano (26 dic), Capodanno (1 gen), Pasqua e Pasquetta.
+ * Tutti gli altri festivi sono aperti salvo evento "CHIUSO" segnato su Google Calendar.
+ */
+function isClosedHoliday(year, month, day) {
+  // Feste fisse
+  if ((month === 1 && day === 1) || (month === 12 && (day === 25 || day === 26))) {
+    return true;
+  }
+  // Pasqua e Pasquetta (algoritmo astronomico gregoriano Meeus/Jones/Butcher)
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const easterMonth = Math.floor((h + l - 7 * m + 114) / 31);
+  const easterDay = ((h + l - 7 * m + 114) % 31) + 1;
+
+  if (month === easterMonth && day === easterDay) return true; // Pasqua
+
+  const mondayDate = new Date(year, easterMonth - 1, easterDay + 1);
+  if (month === (mondayDate.getMonth() + 1) && day === mondayDate.getDate()) return true; // Pasquetta
+
+  return false;
+}
+
 /** Sanitizza stringhe per prevenire HTML Injection nelle email */
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -164,7 +190,6 @@ function getMonthAvailability(year, month, durationHours) {
   // Una sola lettura da Google Calendar per tutto il mese
   const allEvents = calendar.getEvents(firstDay, lastDay);
 
-  const holidays = ['1-1', '6-1', '25-4', '1-5', '2-6', '15-8', '1-11', '8-12', '25-12', '26-12'];
   const now = new Date();
   const pad = function(n) { return (n < 10 ? '0' : '') + n; };
   const todayDateStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
@@ -189,8 +214,8 @@ function getMonthAvailability(year, month, durationHours) {
       continue;
     }
 
-    // Giorni festivi chiusi
-    if (holidays.indexOf(day + '-' + month) !== -1) {
+    // Chiusura per festività speciali di default (Natale, S. Stefano, Capodanno, Pasqua e Pasquetta)
+    if (isClosedHoliday(year, month, day)) {
       daysMap[dStr] = { status: 'closed', slots: [], label: 'Festivo' };
       continue;
     }
@@ -375,6 +400,15 @@ function checkCalendarAvailability(dateStr, timeStr, durationHours) {
   const calendar = CalendarApp.getCalendarById(props.calendarId);
   if (!calendar) {
     throw new Error('Impossibile accedere al calendario con ID specificato.');
+  }
+
+  // 0. Controllo festività speciali di default (Natale, S. Stefano, Capodanno, Pasqua e Pasquetta)
+  const dParts = dateStr.split('-');
+  const checkYear  = parseInt(dParts[0], 10);
+  const checkMonth = parseInt(dParts[1], 10);
+  const checkDay   = parseInt(dParts[2], 10);
+  if (isClosedHoliday(checkYear, checkMonth, checkDay)) {
+    return false;
   }
 
   // 1. Controllo eventi a giorno intero (qualsiasi evento a giorno intero blocca la giornata)
