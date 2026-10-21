@@ -386,7 +386,7 @@ async function fetchMonthAvailability(year, month) {
   }
 
   try {
-    const url = `${SCRIPT_URL}?action=month_availability&year=${year}&month=${month}&duration=${selectedDuration}`;
+    const url = `${SCRIPT_URL}?action=month_availability&year=${year}&month=${month}&duration=${selectedDuration}&_t=${Date.now()}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
