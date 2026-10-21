@@ -95,7 +95,7 @@
       height: 210mm;
       max-width: 148mm;
       max-height: 210mm;
-      background: #fff8ee;
+      background: radial-gradient(circle at 50% 25%, #fffbf2 0%, #ffedd5 45%, #fed7aa 75%, #f97316 120%);
       position: relative;
       overflow: hidden;
       display: flex;
@@ -107,7 +107,7 @@
       border-radius: 3px;
     }
 
-    /* Raggi solari retro crema & arancio caldo */
+    /* Raggi solari retro crema & arancio vivo */
     .bg-retro-rays {
       position: absolute;
       top: -30mm;
@@ -117,9 +117,20 @@
       height: 250mm;
       background: repeating-conic-gradient(
         from 0deg,
-        rgba(245, 158, 11, 0.08) 0deg 10deg,
+        rgba(234, 88, 12, 0.16) 0deg 10deg,
         transparent 10deg 20deg
       );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Onde e archi arancioni sui lati (ispirate al flyer ufficiale) */
+    .bg-orange-arcs {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       pointer-events: none;
       z-index: 0;
     }
@@ -608,6 +619,32 @@
   <!-- FOGLIO A5 -->
   <div class="a5-flyer">
     <div class="bg-retro-rays"></div>
+    
+    <!-- Onde arancioni fluide laterali stile flyer ufficiale -->
+    <svg class="bg-orange-arcs" viewBox="0 0 148 210" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="orangeGradLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#ea580c" stop-opacity="0.6" />
+          <stop offset="50%" stop-color="#f97316" stop-opacity="0.45" />
+          <stop offset="100%" stop-color="#fdba74" stop-opacity="0.1" />
+        </linearGradient>
+        <linearGradient id="orangeGradRight" x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#ea580c" stop-opacity="0.6" />
+          <stop offset="50%" stop-color="#f97316" stop-opacity="0.45" />
+          <stop offset="100%" stop-color="#fdba74" stop-opacity="0.1" />
+        </linearGradient>
+      </defs>
+      <!-- Archi dinamici arancioni a sinistra -->
+      <path d="M 0,15 Q 30,55 14,120 Q 0,165 0,195 L 0,15 Z" fill="url(#orangeGradLeft)" />
+      <path d="M 0,30 Q 18,75 6,140 L 0,160 Z" fill="#f97316" opacity="0.3" />
+      <!-- Archi dinamici arancioni a destra -->
+      <path d="M 148,15 Q 118,55 134,120 Q 148,165 148,195 L 148,15 Z" fill="url(#orangeGradRight)" />
+      <path d="M 148,30 Q 130,75 142,140 L 148,160 Z" fill="#f97316" opacity="0.3" />
+      <!-- Bagliore arancione caldo in alto e in basso -->
+      <ellipse cx="74" cy="12" rx="72" ry="18" fill="#fdba74" opacity="0.45" />
+      <ellipse cx="74" cy="206" rx="74" ry="14" fill="#fb923c" opacity="0.35" />
+    </svg>
+
     <span class="sparkle sp-1">✦</span>
     <span class="sparkle sp-2">✦</span>
     <span class="sparkle sp-3">★</span>
