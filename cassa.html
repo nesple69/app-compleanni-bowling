@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cassa Compleanni — Registrazione Caparra — Bowling Valdera</title>
+  <style>
+    :root {
+      --primary: #b71c1c;
+      --primary-dark: #7f0000;
+      --accent-green: #15803d;
+      --bg-dark: #0f172a;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      color: var(--text-main);
+    }
+
+    .cassa-card {
+      background: var(--card-bg);
+      width: 100%;
+      max-width: 480px;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+      position: relative;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, #b71c1c 0%, #880e4f 100%);
+      color: #fff;
+      padding: 20px 24px;
+      text-align: center;
+    }
+
+    .card-header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .card-header p {
+      font-size: 13px;
+      opacity: 0.9;
+      margin-top: 4px;
+    }
+
+    .card-body {
+      padding: 24px;
+    }
+
+    /* RIEPILOGO PRENOTAZIONE */
+    .party-summary {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--primary);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 22px;
+    }
+
+    .party-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 6px;
+    }
+
+    .party-row {
+      font-size: 14px;
+      color: #334155;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .party-row strong {
+      color: #0f172a;
+    }
+
+    .party-row a {
+      color: #0284c7;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .party-total-row {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed #cbd5e1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 15px;
+    }
+
+    .party-total-val {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    /* FORM ELEMENTS */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #475569;
+      margin-bottom: 8px;
+    }
+
+    .amount-input-wrap {
+      position: relative;
+    }
+
+    .amount-currency {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 24px;
+      font-weight: 800;
+      color: #64748b;
+    }
+
+    .amount-input {
+      width: 100%;
+      padding: 14px 16px 14px 44px;
+      font-size: 26px;
+      font-weight: 800;
+      color: #0f172a;
+      border: 2px solid #cbd5e1;
+      border-radius: 12px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .amount-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(183, 28, 28, 0.15);
+    }
+
+    .quick-chips {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .quick-chip {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      padding: 8px 0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    .quick-chip:hover, .quick-chip:active {
+      background: #e2e8f0;
+      border-color: #94a3b8;
+    }
+
+    /* METODI DI PAGAMENTO */
+    .methods-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .method-card {
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: #334155;
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .method-card:has(input:checked) {
+      border-color: var(--accent-green);
+      background: #f0fdf4;
+      color: var(--accent-green);
+    }
+
+    .method-card input {
+      accent-color: var(--accent-green);
+      width: 18px;
+      height: 18px;
+    }
+
+    /* SUBMIT BUTTON */
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      color: #ffffff;
+      border: none;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 800;
+      border-radius: 14px;
+      cursor: pointer;
+      margin-top: 10px;
+      box-shadow: 0 4px 15px rgba(22, 163, 74, 0.35);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(22, 163, 74, 0.45);
+    }
+
+    .btn-submit:active {
+      transform: translateY(1px);
+    }
+
+    .btn-submit:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* SPINNER */
+    .spinner {
+      width: 22px;
+      height: 22px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* SCHERMATA DI SUCCESSO */
+    .success-view {
+      display: none;
+      padding: 30px 24px;
+      text-align: center;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .success-icon {
+      font-size: 60px;
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+
+    .success-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--accent-green);
+      margin-bottom: 6px;
+    }
+
+    .success-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .success-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .success-box p {
+      font-size: 14px;
+      color: #14532d;
+      margin: 6px 0;
+    }
+
+    .success-box strong {
+      color: #0f172a;
+    }
+
+    .calendar-badge-status {
+      background: #dcfce7;
+      border: 1px solid #86efac;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      color: #166534;
+      margin-bottom: 24px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .redirect-timer {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 14px;
+    }
+
+    .btn-calendar {
+      width: 100%;
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-calendar:hover {
+      background: #0369a1;
+    }
+
+    .btn-close-tab {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 13px;
+      margin-top: 12px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .alert-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cassa-card">
+    <!-- Header -->
+    <div class="card-header">
+      <h1>🎳 Registrazione Caparra</h1>
+      <p>Cassa Compleanni &bull; Bowling Valdera</p>
+    </div>
+
+    <!-- Vista Modulo Incasso -->
+    <div class="card-body" id="formView">
+      <div class="alert-error" id="errorMsg"></div>
+
+      <!-- Box Riepilogo Festa -->
+      <div class="party-summary">
+        <div class="party-title" id="dispFesteggiato">Festa Compleanno</div>
+        <div class="party-row">👤 Genitore: <strong id="dispCliente">-</strong></div>
+        <div class="party-row">📞 Tel: <a href="#" id="dispTelLink"><strong id="dispTelefono">-</strong></a></div>
+        <div class="party-row">📅 Data Festa: <strong id="dispData">-</strong> ore <strong id="dispOra">-</strong></div>
+        <div class="party-total-row">
+          <span>Totale Preventivo Stimato:</span>
+          <span class="party-total-val" id="dispTotale">€ 0.00</span>
+        </div>
+      </div>
+
+      <!-- Modulo Pagamento -->
+      <form id="depositForm" onsubmit="handleDepositSubmit(event)">
+        <div class="form-group">
+          <label class="form-label" for="amountInput">Importo Caparra Ricevuta (€):</label>
+          <div class="amount-input-wrap">
+            <span class="amount-currency">€</span>
+            <input type="number" id="amountInput" class="amount-input" step="0.50" min="1" value="50.00" required>
+          </div>
+          <div class="quick-chips">
+            <button type="button" class="quick-chip" onclick="setAmount(30)">30 €</button>
+            <button type="button" class="quick-chip" onclick="setAmount(50)">50 €</button>
+            <button type="button" class="quick-chip" onclick="setAmount(100)">100 €</button>
+            <button type="button" class="quick-chip" id="btnChipTotal" onclick="setAmountTotal()">Totale</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Metodo di Pagamento:</label>
+          <div class="methods-grid">
+            <label class="method-card">
+              <input type="radio" name="paymentMethod" value="Contanti" checked>
+              <span>💵 Contanti</span>
+            </label>
+            <label class="method-card">
+              <input type="radio" name="paymentMethod" value="POS / Carta">
+              <span>💳 Carta / POS</span>
+            </label>
+            <label class="method-card">
+              <input type="radio" name="paymentMethod" value="Satispay">
+              <span>📱 Satispay</span>
+            </label>
+            <label class="method-card">
+              <input type="radio" name="paymentMethod" value="Bonifico">
+              <span>🏦 Bonifico</span>
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="btnSubmit">
+          <span id="btnSubmitText">🟢 REGISTRA INCASSO E CONFERMA</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Vista Successo e Reindirizzamento -->
+    <div class="success-view" id="successView">
+      <div class="success-icon">🎉</div>
+      <h2 class="success-title">Caparra Registrata!</h2>
+      <p class="success-subtitle" id="succPartyName">Festa Compleanno</p>
+
+      <div class="success-box">
+        <p>💰 <strong>Caparra incassata:</strong> <span id="succAmount">€ 50.00</span> (<span id="succMethod">Contanti</span>)</p>
+        <p>🕒 <strong>Data/Ora incasso:</strong> <span id="succTime">-</span></p>
+        <hr style="border: 0; border-top: 1px dashed #86efac; margin: 8px 0;">
+        <p style="font-size: 15px; font-weight: bold; color: #166534;">
+          💳 Saldo rimanente alla festa: <span id="succRemaining" style="color: #b71c1c;">€ 0.00</span>
+        </p>
+      </div>
+
+      <div class="calendar-badge-status">
+        <strong>🟢 Google Calendar aggiornato in automatico!</strong><br>
+        Titolo: <b id="succCalendarTitle">🟢 ROSSI - 17:15 (CAPARRA OK)</b><br>
+        Colore impostato su <b>VERDE</b>. Ricevuta inviata al cliente.
+      </div>
+
+      <div class="redirect-timer" id="redirectMsg">
+        Riapertura Google Calendar in <b id="timerCount">3</b> secondi...
+      </div>
+
+      <a href="https://calendar.google.com/calendar/r" class="btn-calendar" id="btnGoCalendar">
+        👉 Torna a Google Calendar Subito
+      </a>
+
+      <div>
+        <button class="btn-close-tab" onclick="window.close()">Oppure chiudi questa scheda</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configurazione Endpoint Live e Supporto Test Locale
+    const LIVE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzkz4wmsgLUe0KsLYsbbC7kJVifeSDTduGSya3C-QIQ4htLT5OxIDYlqkbiw_vh_AAhxQ/exec';
+    const DEFAULT_TOKEN   = 'BV2026-f8e3a7d2b9c4-k7p1';
+
+    // Recupera parametri URL (istanziati istantaneamente)
+    const urlParams = new URLSearchParams(window.location.search);
+    const isLocal   = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const useMock   = isLocal && (urlParams.get('mock') === '1');
+    const SCRIPT_URL = useMock ? '/api/save_deposit' : LIVE_SCRIPT_URL;
+    const paramRow          = urlParams.get('row') || '';
+    const paramToken        = urlParams.get('token') || DEFAULT_TOKEN;
+    const paramCognome      = urlParams.get('cognome') || '';
+    const paramCliente      = urlParams.get('cliente') || '';
+    const paramFesteggiato  = urlParams.get('festeggiato') || '';
+    const paramAnni         = urlParams.get('anni') || '';
+    const paramTelefono     = urlParams.get('telefono') || '';
+    const paramData         = urlParams.get('data') || '';
+    const paramOra          = urlParams.get('ora') || '';
+    const paramTotale       = parseFloat(urlParams.get('totale')) || 0;
+    const paramEventId      = urlParams.get('eventId') || '';
+
+    let totalParty      = paramTotale;
+    let resolvedRow     = paramRow;
+    let resolvedEventId = paramEventId;
+    let resolvePromise  = null;
+
+    async function resolveBookingRow() {
+      if (useMock) return;
+      try {
+        const checkParams = new URLSearchParams({
+          action: 'pay_form',
+          row: paramRow || '2',
+          festeggiato: paramFesteggiato,
+          cliente: paramCliente,
+          eventId: paramEventId,
+          token: paramToken
+        });
+        const resp = await fetch(`${LIVE_SCRIPT_URL}?${checkParams.toString()}`);
+        const text = await resp.text();
+        const mRow = text.match(/ROW_NUM\s*(?:=|\\x3d)\s*(\d+)/);
+        if (mRow && mRow[1]) {
+          resolvedRow = mRow[1];
+        }
+        const mEv = text.match(/EVENT_ID_STR\s*(?:=|\\x3d)\s*(?:\\"|")([^"\\]+)/);
+        if (mEv && mEv[1]) {
+          resolvedEventId = mEv[1];
+        }
+      } catch (e) {
+        console.warn('Verifica preventiva riga non riuscita, uso parametri URL:', e);
+      }
+    }
+
+    // Popola campi interfaccia all'istante (0 millisecondi)
+    document.addEventListener('DOMContentLoaded', () => {
+      resolvePromise = resolveBookingRow();
+      if (paramFesteggiato) {
+        document.getElementById('dispFesteggiato').textContent = `Festa di ${paramFesteggiato} ${paramAnni ? '(' + paramAnni + ' anni)' : ''}`;
+      }
+      if (paramCliente) {
+        document.getElementById('dispCliente').textContent = paramCliente;
+      }
+      if (paramTelefono) {
+        const telClean = paramTelefono.replace(/[^\d+]/g, '');
+        document.getElementById('dispTelefono').textContent = paramTelefono;
+        document.getElementById('dispTelLink').href = `tel:${telClean}`;
+      }
+      if (paramData) {
+        document.getElementById('dispData').textContent = paramData;
+      }
+      if (paramOra) {
+        document.getElementById('dispOra').textContent = paramOra;
+      }
+      if (paramTotale > 0) {
+        document.getElementById('dispTotale').textContent = `€ ${paramTotale.toFixed(2)}`;
+      }
+
+      // Imposta valore default caparra (50€ o totale se inferiore)
+      if (paramTotale > 0 && paramTotale < 50) {
+        setAmount(paramTotale);
+      }
+    });
+
+    function setAmount(val) {
+      if (val && val > 0) {
+        document.getElementById('amountInput').value = parseFloat(val).toFixed(2);
+      }
+    }
+
+    function setAmountTotal() {
+      if (totalParty > 0) {
+        setAmount(totalParty);
+      }
+    }
+
+    // Invio asincrono ultra-veloce senza mai lasciare la pagina bianca
+    async function handleDepositSubmit(e) {
+      e.preventDefault();
+      const errBox = document.getElementById('errorMsg');
+      errBox.style.display = 'none';
+
+      const amountVal = parseFloat(document.getElementById('amountInput').value);
+      if (!amountVal || amountVal <= 0) {
+        errBox.textContent = 'Inserisci un importo caparra valido.';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      const selectedMethodEl = document.querySelector('input[name="paymentMethod"]:checked');
+      const methodVal = selectedMethodEl ? selectedMethodEl.value : 'Contanti';
+
+      if (!paramRow) {
+        errBox.textContent = 'Parametro prenotazione mancante (riga non specificata).';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      // Feedback visivo immediato: disabilita tasto e mostra spinner
+      const btn = document.getElementById('btnSubmit');
+      const btnText = document.getElementById('btnSubmitText');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div><span>Registrazione in corso...</span>';
+
+      if (resolvePromise) {
+        try { await resolvePromise; } catch (_) {}
+      }
+
+      const queryParams = new URLSearchParams({
+        action: 'save_deposit',
+        format: 'json',
+        row: resolvedRow || paramRow,
+        amount: amountVal,
+        method: methodVal,
+        cognome: paramCognome || paramCliente,
+        cliente: paramCliente,
+        festeggiato: paramFesteggiato,
+        ora: paramOra,
+        eventId: resolvedEventId || paramEventId,
+        token: paramToken,
+        _t: Date.now()
+      });
+
+      try {
+        const response = await fetch(`${SCRIPT_URL}?${queryParams.toString()}`);
+        if (!response.ok) {
+          throw new Error(`Errore HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.success !== true) {
+          throw new Error(data.error || 'Errore nella registrazione');
+        }
+
+        // Mostra Schermata di Successo
+        document.getElementById('formView').style.display = 'none';
+        document.getElementById('successView').style.display = 'block';
+
+        const festName = data.festeggiato || paramFesteggiato || 'Festa Compleanno';
+        document.getElementById('succPartyName').textContent = `Festa di ${festName}`;
+        document.getElementById('succAmount').textContent = `€ ${amountVal.toFixed(2)}`;
+        document.getElementById('succMethod').textContent = methodVal;
+        document.getElementById('succTime').textContent = data.nowFormatted || 'Adesso';
+        
+        const remainingVal = (typeof data.saldoRimanente === 'number') 
+          ? data.saldoRimanente 
+          : Math.max(0, totalParty - amountVal);
+        document.getElementById('succRemaining').textContent = `€ ${remainingVal.toFixed(2)}`;
+
+        // Mostra il titolo aggiornato dell'evento Google Calendar
+        const lastFamilyName = (paramCognome || paramCliente || 'PRENOTAZIONE').toUpperCase();
+        const calTitle = `🟢 ${lastFamilyName}${paramOra ? ' - ' + paramOra : ''} (CAPARRA OK)`;
+        document.getElementById('succCalendarTitle').textContent = calTitle;
+
+        // Avvia conto alla rovescia per riaprire Google Calendar aggiornato
+        startRedirectCountdown();
+
+      } catch (err) {
+        console.error('Errore registrazione caparra:', err);
+        btn.disabled = false;
+        btn.innerHTML = '<span>🟢 REGISTRA INCASSO E CONFERMA</span>';
+        errBox.textContent = `Impossibile completare la registrazione: ${err.message}. Verifica la connessione e riprova.`;
+        errBox.style.display = 'block';
+      }
+    }
+
+    function startRedirectCountdown() {
+      let seconds = 3;
+      const timerEl = document.getElementById('timerCount');
+      const interval = setInterval(() => {
+        seconds--;
+        if (timerEl) timerEl.textContent = seconds;
+        if (seconds <= 0) {
+          clearInterval(interval);
+          // Riapre Google Calendar: la scheda ricaricata mostrerà il pallino verde e il titolo aggiornato!
+          window.location.href = 'https://calendar.google.com/calendar/r';
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

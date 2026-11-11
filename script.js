@@ -7,7 +7,7 @@
 // come proprietà "API_SECRET" (Impostazioni progetto → Proprietà dello script).
 const API_TOKEN = 'BV2026-f8e3a7d2b9c4-k7p1';
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxr_arZy4ZKIVtlUdUkPbkNhmCO31509qOAeVqXwodAaQE-4wZ0g4UGHvT6IOVph31BBQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzkz4wmsgLUe0KsLYsbbC7kJVifeSDTduGSya3C-QIQ4htLT5OxIDYlqkbiw_vh_AAhxQ/exec';
 
 // Tariffe Bowling per pista (fisse tutti i giorni: 30,00 € / ora a pista)
 const PRICE_PER_LANE = {
@@ -360,12 +360,7 @@ const MONTH_NAMES_IT = [
 function updateMinParticipants() {
   const partInput = document.getElementById('partecipanti');
   if (!partInput) return;
-  let selectedTime = '17:00';
-  document.getElementsByName('fascia_oraria').forEach(r => { if (r.checked) selectedTime = r.value; });
-  let min = 15;
-  if (selectedTime === '18:00') min = 12;
-  if (selectedTime === '19:00') min = 10;
-  if (selectedTime === '19:30') min = 15;
+  const min = 10;
   partInput.min = min;
   const currentVal = parseInt(partInput.value, 10);
   if (isNaN(currentVal) || currentVal < min) {
@@ -374,25 +369,58 @@ function updateMinParticipants() {
   }
 }
 
+// Helper per rimuovere la vecchia regola di chiusura fissa del mercoledì
+function sanitizeMonthDays(days) {
+  if (!days || typeof days !== 'object') return days;
+  Object.keys(days).forEach(dateStr => {
+    const item = days[dateStr];
+    if (item && item.status === 'closed' && item.label && /mercoled/i.test(item.label)) {
+      item.status = 'available';
+      item.label = 'Disponibile';
+      item.slots = (item.slots && item.slots.length > 0) ? item.slots : ['16:00', '17:15', '18:30', '19:45'];
+    }
+  });
+  return days;
+}
+
 async function fetchMonthAvailability(year, month) {
   let selectedDuration = '1.5';
   document.getElementsByName('durata').forEach(r => {
     if (r.checked) selectedDuration = r.value.replace('h', '');
   });
 
-  const cacheKey = `${year}-${month}_${selectedDuration}h`;
+  const cacheKey = `bv_cal_${year}_${month}_${selectedDuration}h_v4`;
+  // 1. Memoria rapida
   if (monthAvailabilityCache[cacheKey]) {
-    return monthAvailabilityCache[cacheKey];
+    return sanitizeMonthDays(monthAvailabilityCache[cacheKey]);
   }
+  // 2. SessionStorage per navigazione istantanea a 0 ms
+  try {
+    const sCached = sessionStorage.getItem(cacheKey);
+    if (sCached) {
+      const parsed = sanitizeMonthDays(JSON.parse(sCached));
+      monthAvailabilityCache[cacheKey] = parsed;
+      return parsed;
+    }
+  } catch (e) {}
 
   try {
-    const url = `${SCRIPT_URL}?action=month_availability&year=${year}&month=${month}&duration=${selectedDuration}&_t=${Date.now()}`;
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const baseUrl = (isLocal && new URLSearchParams(window.location.search).get('mock') === '1')
+      ? '/api'
+      : SCRIPT_URL;
+
+    const url = `${baseUrl}?action=month_availability&year=${year}&month=${month}&duration=${selectedDuration}&_t=${Date.now()}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (data && data.success && data.days) {
-      monthAvailabilityCache[cacheKey] = data.days;
-      return data.days;
+      const sanitizedDays = sanitizeMonthDays(data.days);
+      monthAvailabilityCache[cacheKey] = sanitizedDays;
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(sanitizedDays));
+      } catch (e) {}
+      return sanitizedDays;
     }
   } catch (err) {
     console.warn('Recupero disponibilità mensile non riuscito, uso fallback locale:', err);
@@ -431,8 +459,9 @@ async function renderInteractiveCalendar(year, month) {
   const dayCells = {};
   const pad = n => (n < 10 ? '0' : '') + n;
   const todayISO = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const defaultSlots = ['16:00', '17:15', '18:30', '19:45'];
 
-  // Skeleton iniziale dei giorni
+  // RENDERING ISTANTANEO (0 ms): tutti i giorni futuri sono subito attivi, verdi e cliccabili
   for (let day = 1; day <= numDays; day++) {
     const cell = document.createElement('div');
     cell.className = 'cal-day-cell';
@@ -447,49 +476,17 @@ async function renderInteractiveCalendar(year, month) {
     gridEl.appendChild(cell);
     dayCells[isoDate] = cell;
 
-    const dayDate = new Date(year, month - 1, day, 12, 0, 0);
-    const dayOfWeek = dayDate.getDay();
-
     if (isoDate < todayISO) {
       cell.classList.add('past');
       cell.title = 'Data passata';
-    } else if (dayOfWeek === 3) {
+    } else if (isClosedHoliday(year, month, day)) {
       cell.classList.add('closed');
-      cell.title = 'Chiuso (Mercoledì)';
-    }
-  }
-
-  // Chiamata backend per caricare le disponibilità reali
-  const daysData = await fetchMonthAvailability(year, month);
-
-  for (let day = 1; day <= numDays; day++) {
-    const isoDate = `${year}-${pad(month)}-${pad(day)}`;
-    const cell    = dayCells[isoDate];
-    if (!cell) continue;
-
-    const dayDate   = new Date(year, month - 1, day, 12, 0, 0);
-    const dayOfWeek = dayDate.getDay();
-
-    if (isoDate < todayISO || dayOfWeek === 3) continue;
-
-    if (daysData && daysData[isoDate]) {
-      const info = daysData[isoDate];
-      if (info.status === 'available') {
-        cell.classList.add('available');
-        cell.title = info.label || 'Disponibile';
-        cell.onclick = () => selectCalendarDate(isoDate, info.slots);
-      } else if (info.status === 'full') {
-        cell.classList.add('full');
-        cell.title = 'Tutto Pieno';
-      } else {
-        cell.classList.add('closed');
-        cell.title = info.label || 'Chiuso';
-      }
+      cell.title = 'Festivo (Chiuso)';
     } else {
-      // Fallback
+      // SUBITO DISPONIBILE: l'utente può cliccare immediatamente al 1° millisecondo!
       cell.classList.add('available');
-      const fallbackSlots = (dayOfWeek === 0) ? ['19:30'] : ['17:00', '18:00', '19:00'];
-      cell.onclick = () => selectCalendarDate(isoDate, fallbackSlots);
+      cell.title = 'Disponibile';
+      cell.onclick = () => selectCalendarDate(isoDate, defaultSlots);
     }
 
     if (isoDate === selectedDateISO) {
@@ -497,14 +494,45 @@ async function renderInteractiveCalendar(year, month) {
     }
   }
 
-  // Pre-seleziona la prima data disponibile se non ce n'è una già scelta
+  // Pre-seleziona subito la prima data disponibile (senza aspettare il server!)
   if (!selectedDateISO || !document.getElementById('data').value) {
     const firstAvailKey = Object.keys(dayCells).find(iso => dayCells[iso].classList.contains('available'));
     if (firstAvailKey) {
-      const slots = (daysData && daysData[firstAvailKey]) ? daysData[firstAvailKey].slots : ['17:00', '18:00', '19:00'];
-      selectCalendarDate(firstAvailKey, slots);
+      selectCalendarDate(firstAvailKey, defaultSlots);
     }
   }
+
+  // Sincronizzazione in background non bloccante con Google Calendar
+  fetchMonthAvailability(year, month).then(daysData => {
+    if (!daysData) return;
+    for (let day = 1; day <= numDays; day++) {
+      const isoDate = `${year}-${pad(month)}-${pad(day)}`;
+      const cell    = dayCells[isoDate];
+      if (!cell || isoDate < todayISO) continue;
+
+      if (daysData[isoDate]) {
+        const info = daysData[isoDate];
+        cell.classList.remove('available', 'full', 'closed');
+        if (info.status === 'available') {
+          cell.classList.add('available');
+          cell.title = info.label || 'Disponibile';
+          cell.onclick = () => selectCalendarDate(isoDate, info.slots);
+          // Se l'utente ha già selezionato questa data, aggiorna gli slot orari
+          if (isoDate === selectedDateISO) {
+            renderTimeSlots(isoDate, info.slots);
+          }
+        } else if (info.status === 'full') {
+          cell.classList.add('full');
+          cell.title = 'Tutto Pieno';
+          cell.onclick = null;
+        } else {
+          cell.classList.add('closed');
+          cell.title = info.label || 'Chiuso';
+          cell.onclick = null;
+        }
+      }
+    }
+  });
 }
 
 function selectCalendarDate(isoDate, availableSlots) {
@@ -534,7 +562,7 @@ function selectCalendarDate(isoDate, availableSlots) {
 
   const slots = (availableSlots && availableSlots.length > 0)
     ? availableSlots
-    : ['17:00', '18:00', '19:00'];
+    : ['16:00', '17:15', '18:30', '19:45'];
 
   renderTimeSlots(isoDate, slots);
   updateRealTimeCost();
@@ -554,17 +582,12 @@ function renderTimeSlots(isoDate, availableSlots) {
   const container = document.getElementById('timeSlotsContainer');
   if (!container) return;
 
-  const [y, m, d] = isoDate.split('-').map(Number);
-  const dayOfWeek = new Date(y, m - 1, d).getDay();
-  const isSunday = (dayOfWeek === 0);
-
-  const allPossibleSlots = isSunday
-    ? [{ time: '19:30', sub: 'Min 15 Persone • Solo Dom' }]
-    : [
-        { time: '17:00', sub: 'Min 15 Persone' },
-        { time: '18:00', sub: 'Min 12 Persone' },
-        { time: '19:00', sub: 'Min 10 Persone' }
-      ];
+  const allPossibleSlots = [
+    { time: '16:00', sub: 'Pomeriggio' },
+    { time: '17:15', sub: 'Pomeriggio' },
+    { time: '18:30', sub: 'Tardo Pomeriggio' },
+    { time: '19:45', sub: 'Sera' }
+  ];
 
   container.innerHTML = '';
   let checkedOne = false;
@@ -647,16 +670,6 @@ async function checkAvailability() {
     return;
   }
 
-  if (dayOfWeek === 3) {
-    showUnavailable('Spiacenti, il Mercoledì non accettiamo compleanni.');
-    return;
-  }
-
-  if (dayOfWeek === 0 && time !== '19:30') {
-    showUnavailable('La Domenica accettiamo solo la fascia delle 19:30.');
-    return;
-  }
-
   if (isClosedHoliday(year, m, d)) {
     showUnavailable('Spiacenti, non accettiamo compleanni in questa festività (Natale, S. Stefano, Capodanno, Pasqua e Pasquetta).');
     return;
@@ -672,8 +685,12 @@ async function checkAvailability() {
   const timeoutId   = setTimeout(() => controller.abort(), 10000);
 
   try {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const useLocalMock = isLocal && new URLSearchParams(window.location.search).get('mock') === '1';
+    const endpoint = useLocalMock ? `/api?date=${dateItalian}&time=${time}&duration=${selectedDuration}` : `${SCRIPT_URL}?date=${dateItalian}&time=${time}&duration=${selectedDuration}`;
+
     const response = await fetch(
-      `${SCRIPT_URL}?date=${dateItalian}&time=${time}&duration=${selectedDuration}`,
+      endpoint,
       { signal: controller.signal }
     );
     clearTimeout(timeoutId);
@@ -733,6 +750,7 @@ async function saveToDatabase() {
     festeggiato:         document.getElementById('festeggiato').value.trim(),
     anni:                document.getElementById('anni_festeggiato').value.trim(),
     cliente:             `${nome} ${cognome}`.trim(),
+    cognome:             cognome.trim(),
     telefono:            document.getElementById('telefono').value.trim(),
     email:               document.getElementById('email').value.trim(),
     data_festa:          dataFestaItalian,
@@ -753,7 +771,11 @@ async function saveToDatabase() {
   };
 
   try {
-    const response = await fetch(SCRIPT_URL, {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const useLocalMock = isLocal && new URLSearchParams(window.location.search).get('mock') === '1';
+    const targetUrl = useLocalMock ? '/api/mock_book' : SCRIPT_URL;
+
+    const response = await fetch(targetUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload)
@@ -766,6 +788,9 @@ async function saveToDatabase() {
     if (text.startsWith('{')) {
       const result = JSON.parse(text);
       if (result.success === true) {
+        if (useLocalMock && result.previewUrl) {
+          console.log('📧 Anteprima email generata in locale:', result.previewUrl);
+        }
         return { success: true };
       }
       return { success: false, error: result.error || 'Errore durante la registrazione.' };
@@ -888,16 +913,9 @@ function init() {
       return;
     }
 
-    let selectedTime = '17:00';
-    document.getElementsByName('fascia_oraria').forEach(r => { if (r.checked) selectedTime = r.value; });
-
-    let minRequired = 15;
-    if (selectedTime === '18:00') minRequired = 12;
-    if (selectedTime === '19:00') minRequired = 10;
-    if (selectedTime === '19:30') minRequired = 15;
-
+    const minRequired = 10;
     if (partNum < minRequired) {
-      showCustomAlert(`Per la fascia delle ${selectedTime} il numero minimo è ${minRequired} persone.`);
+      showCustomAlert(`Il numero minimo per prenotare una festa è di ${minRequired} persone.`);
       part.classList.add('shake');
       setTimeout(() => part.classList.remove('shake'), 400);
       return;
