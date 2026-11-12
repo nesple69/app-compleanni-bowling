@@ -470,8 +470,8 @@
 
       <div class="calendar-badge-status">
         <strong>🟢 Google Calendar aggiornato in automatico!</strong><br>
-        Titolo: <b id="succCalendarTitle">🟢 ROSSI - 17:15 (CAPARRA OK)</b><br>
-        Colore impostato su <b>VERDE</b>. Ricevuta inviata al cliente.
+        Titolo: <b id="succCalendarTitle">ROSSI - 17:15 (CAPARRA OK)</b><br>
+        Colore pallino impostato su <b>VERDE</b>. Ricevuta inviata al cliente.
       </div>
 
       <div class="redirect-timer" id="redirectMsg">
@@ -676,9 +676,9 @@
           : Math.max(0, totalParty - amountVal);
         document.getElementById('succRemaining').textContent = `€ ${remainingVal.toFixed(2)}`;
 
-        // Mostra il titolo aggiornato dell'evento Google Calendar
+        // Mostra il titolo aggiornato dell'evento Google Calendar (senza doppio pallino emoji)
         const lastFamilyName = (paramCognome || paramCliente || 'PRENOTAZIONE').toUpperCase();
-        const calTitle = `🟢 ${lastFamilyName}${paramOra ? ' - ' + paramOra : ''} (CAPARRA OK)`;
+        const calTitle = data.updatedTitle ? data.updatedTitle.replace(/^[🟢🔴🟡\s]+/, '') : `${lastFamilyName}${paramOra ? ' - ' + paramOra : ''} (CAPARRA OK)`;
         document.getElementById('succCalendarTitle').textContent = calTitle;
 
         // Avvia conto alla rovescia per riaprire Google Calendar aggiornato

@@ -795,7 +795,7 @@ function renderPayForm(e) {
               <p style="margin:4px 0;">💳 <strong>Saldo Rimanente alla Festa:</strong> <span class="rem">€ ${saldoNum.toFixed(2)}</span></p>
             </div>
             
-            <p style="color:#475569; font-size:14px;">L'evento su Google Calendar è confermato in <strong style="color:#16a34a;">VERDE 🟢 (${cognome} - ${ora} CAPARRA OK)</strong>.</p>
+            <p style="color:#475569; font-size:14px;">L'evento su Google Calendar è confermato in <strong style="color:#16a34a;">VERDE (${cognome} - ${ora} CAPARRA OK)</strong>.</p>
             <a href="https://calendar.google.com/calendar/r" target="_top" class="btn-cal">👉 Torna a Google Calendar</a>
           </div>
         </div>
@@ -907,7 +907,7 @@ function renderPayForm(e) {
 
           <p style="font-size: 14px; color: #475569; line-height: 1.5;">
             🟢 Evento su Google Calendar aggiornato in <strong>VERDE</strong>:<br>
-            <strong id="resCalTitle">🟢 ${cognome} - ${ora} (CAPARRA OK)</strong>
+            <strong id="resCalTitle">${cognome} - ${ora} (CAPARRA OK)</strong>
           </p>
 
           <a href="https://calendar.google.com/calendar/r" target="_top" class="btn-cal">👉 Torna a Google Calendar</a>
@@ -1179,6 +1179,17 @@ function repairAllCalendarLinks() {
           details.push({ row: rowNum, festeggiato: fest, cliente: cli, title: ev.getTitle(), status: 'GIA_ALLINEATO', url: correctUrl });
         }
       } else {
+        // Se la caparra è già versata e il titolo ha il doppio pallino emoji "🟢 ", lo rimuove lasciando solo il colore verde dell'evento
+        if (stato === 'VERSATA') {
+          try {
+            ev.setColor(CalendarApp.EventColor.GREEN);
+            const curTitle = ev.getTitle() || '';
+            if (/^[🟢🔴🟡\s]+/.test(curTitle)) {
+              ev.setTitle(curTitle.replace(/^[🟢🔴🟡\s]+/, '').trim());
+              updatedCount++;
+            }
+          } catch (eClean) {}
+        }
         details.push({ row: rowNum, festeggiato: fest, cliente: cli, title: ev.getTitle(), status: stato === 'VERSATA' ? 'CAPARRA_GIA_VERSATA' : 'GIA_ALLINEATO', url: correctUrl });
       }
     } catch (errRow) {
@@ -1248,10 +1259,10 @@ function saveDepositCore(params) {
     if (calendar) {
       const event = findCalendarEventForRow(calendar, rowData, eventId, timeZone);
       if (event) {
-        // Cambia colore in VERDE (PALE_GREEN)
-        event.setColor(CalendarApp.EventColor.PALE_GREEN);
+        // Cambia colore del pallino nativo di Google Calendar in VERDE (GREEN) senza aggiungere un secondo pallino nel titolo
+        event.setColor(CalendarApp.EventColor.GREEN);
 
-        // Aggiorna titolo evento nel formato "🟢 ROSSI - 18:00 (CAPARRA OK)"
+        // Aggiorna titolo evento nel formato "ROSSI - 18:00 (CAPARRA OK)" (senza emoji pallino iniziale)
         try {
           const rawTitle = event.getTitle() || '';
           let cleanTitle = rawTitle.replace(/^[🟢🔴🟡\s]+/, '').replace(/\s*\([^)]*\)$/, '').trim();
@@ -1261,7 +1272,7 @@ function saveDepositCore(params) {
             const ora = (rawOra instanceof Date) ? Utilities.formatDate(rawOra, timeZone, 'HH:mm') : String(rawOra || '');
             cleanTitle = cognome.toUpperCase() + (ora ? ' - ' + ora : '');
           }
-          updatedTitle = '🟢 ' + cleanTitle + ' (CAPARRA OK)';
+          updatedTitle = cleanTitle + ' (CAPARRA OK)';
           event.setTitle(updatedTitle);
         } catch (eTitle) {
           console.warn('Errore aggiornamento titolo evento Calendar:', eTitle);
