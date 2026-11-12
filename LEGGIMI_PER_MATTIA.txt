@@ -1,11 +1,35 @@
 ========================================================================
 APP PRENOTAZIONE COMPLEANNI - BOWLING VALDERA
 Pacchetto Aggiornato per Mattia (Sviluppatore Web)
-Data: 20 Ottobre 2026
+Data: 26 Ottobre 2026 (Release 3.2)
 ========================================================================
 
 Ciao Mattia!
 Questo archivio contiene il codice sorgente completo e aggiornato dell'App Compleanni per il Bowling Valdera.
+
+------------------------------------------------------------------------
+>>> COSA C'È DA AGGIORNARE SUL SITO (IMPORTANTE) <<<
+------------------------------------------------------------------------
+Il backend Google Apps Script è GIÀ STATO AGGIORNATO E COLLAUDATO con il nuovo endpoint attivo:
+https://script.google.com/macros/s/AKfycbzkz4wmsgLUe0KsLYsbbC7kJVifeSDTduGSya3C-QIQ4htLT5OxIDYlqkbiw_vh_AAhxQ/exec
+
+Al webmaster Mattia basta semplicemente caricare/sostituire i file del frontend sul server web o Vercel (`index.html`, `style.css`, `script.js`, `cassa.html`, `assets/`, font e manifest):
+1. NUOVI ORARI TURNI COMPLEANNI:
+   - 16:00
+   - 17:15
+   - 18:30
+   - 19:45
+2. MERCOLEDÌ APERTO E PRENOTABILE:
+   - Rimossa la chiusura fissa del mercoledì (ora aperto e prenotabile).
+3. NUOVA CASSA RAPIDA `cassa.html`:
+   - Pagina super-veloce che si apre in meno di 50ms direttamente dal link in Google Calendar.
+   - Registrazione incasso caparra asincrona (niente schermata bianca).
+   - Aggiornamento automatico del titolo su Google Calendar: "🟢 COGNOME - ORA (CAPARRA OK)" e colore VERDE.
+   - Auto-refresh automatico di Google Calendar dopo 3 secondi per evitare il refresh manuale con F5.
+4. PROMEMORIA CAPARRA 12 ORE RESILIENTE:
+   - Invio automatico della mail di promemoria dopo 12 ore dalla prenotazione (se la caparra non risulta ancora versata).
+   - Controllo temporizzato automatico installato su Google Apps Script (trigger ogni 30 minuti).
+   - Endpoint diagnostico GET: ?action=check_reminders&token=BV2026-f8e3a7d2b9c4-k7p1.
 
 ------------------------------------------------------------------------
 1. COSA C'È DI NUOVO IN QUESTA VERSIONE
@@ -57,7 +81,7 @@ Questo archivio contiene il codice sorgente completo e aggiornato dell'App Compl
 ------------------------------------------------------------------------
 In script.js è già configurato l'endpoint live attivo e verificato:
 SCRIPT_URL:
-https://script.google.com/macros/s/AKfycbxr_arZy4ZKIVtlUdUkPbkNhmCO31509qOAeVqXwodAaQE-4wZ0g4UGHvT6IOVph31BBQ/exec
+https://script.google.com/macros/s/AKfycbzkz4wmsgLUe0KsLYsbbC7kJVifeSDTduGSya3C-QIQ4htLT5OxIDYlqkbiw_vh_AAhxQ/exec
 
 Token di sicurezza condiviso (API_TOKEN):
 BV2026-f8e3a7d2b9c4-k7p1

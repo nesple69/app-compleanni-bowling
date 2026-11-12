@@ -1275,8 +1275,14 @@ function saveDepositCore(params) {
           '💳 SALDO RIMANENTE DA INCASSARE ALLA FESTA: € ' + saldoRimanente.toFixed(2) + '\n' +
           '========================================\n';
 
-        // Rimuove eventuale vecchio blocco di stato caparra
-        const strippedDesc = currentDesc.replace(/^🔴 STATO CAPARRA[\s\S]*?========================================\n/, '');
+        // Rimuove eventuale vecchio blocco di stato caparra e il relativo link
+        let strippedDesc = currentDesc;
+        const festIdx = strippedDesc.indexOf('Festeggiato:');
+        if (festIdx !== -1) {
+          strippedDesc = strippedDesc.substring(festIdx);
+        } else {
+          strippedDesc = strippedDesc.replace(/^🔴 STATO CAPARRA[\s\S]*?========================================\r?\n?/, '');
+        }
         event.setDescription(updatedHeader + strippedDesc);
       }
     }

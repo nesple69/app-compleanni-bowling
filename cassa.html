@@ -516,25 +516,45 @@
     let resolvePromise  = null;
 
     async function resolveBookingRow() {
-      if (useMock) return;
+      if (useMock || !paramFesteggiato) return;
       try {
         const checkParams = new URLSearchParams({
-          action: 'pay_form',
-          row: paramRow || '2',
-          festeggiato: paramFesteggiato,
-          cliente: paramCliente,
-          eventId: paramEventId,
-          token: paramToken
+          action: 'check_reminders',
+          token: paramToken,
+          _t: Date.now()
         });
         const resp = await fetch(`${LIVE_SCRIPT_URL}?${checkParams.toString()}`);
-        const text = await resp.text();
-        const mRow = text.match(/ROW_NUM\s*(?:=|\\x3d)\s*(\d+)/);
-        if (mRow && mRow[1]) {
-          resolvedRow = mRow[1];
-        }
-        const mEv = text.match(/EVENT_ID_STR\s*(?:=|\\x3d)\s*(?:\\"|")([^"\\]+)/);
-        if (mEv && mEv[1]) {
-          resolvedEventId = mEv[1];
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (data && Array.isArray(data.actions)) {
+          const targetFest = paramFesteggiato.trim().toLowerCase();
+          const numRow = parseInt(paramRow, 10) || 0;
+
+          // 1. Verifica se la riga indicata nell'URL corrisponde già al festeggiato (e non è già versata se ce n'è un'altra in attesa)
+          const exactMatch = data.actions.find(
+            a => a.row === numRow && String(a.festeggiato || '').trim().toLowerCase() === targetFest
+          );
+          if (exactMatch) {
+            resolvedRow = String(exactMatch.row);
+            return;
+          }
+
+          // 2. Se sono state eliminate righe e il numero è slittato, cerca per nome del festeggiato
+          const allMatches = data.actions.filter(
+            a => String(a.festeggiato || '').trim().toLowerCase() === targetFest
+          );
+          if (allMatches.length > 0) {
+            // Preferisci le prenotazioni con caparra ancora in attesa rispetto a quelle già versate
+            const pendingMatches = allMatches.filter(
+              a => String(a.status || '').toLowerCase().indexOf('caparra già versata') === -1
+            );
+            const pool = pendingMatches.length > 0 ? pendingMatches : allMatches;
+            pool.sort((a, b) => Math.abs(a.row - numRow) - Math.abs(b.row - numRow));
+            resolvedRow = String(pool[0].row);
+            if (resolvedRow !== String(paramRow)) {
+              resolvedEventId = '';
+            }
+          }
         }
       } catch (e) {
         console.warn('Verifica preventiva riga non riuscita, uso parametri URL:', e);

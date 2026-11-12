@@ -30,7 +30,7 @@ Nessuna credenziale sensibile è hardcodata nel codice. Tutto è gestito tramite
 
 ---
 
-## 📊 Mappatura Colonne Google Sheets (21 Colonne)
+## 📊 Mappatura Colonne Google Sheets (28 Colonne)
 
 Il foglio di calcolo (`dati_compleanno`) accetta le seguenti colonne ordinate:
 
@@ -56,7 +56,29 @@ Col 18 (R): GDPR (Accettato / No)
 Col 19 (S): Marketing (Sì / No)
 Col 20 (T): Foto Torta (Sì / No)
 Col 21 (U): Dettagli Allergie (Specifica delle intolleranze comunicate)
+Col 22 (V): Stato Caparra (IN ATTESA / VERSATA)
+Col 23 (W): Importo Caparra Versata (€#,##0.00)
+Col 24 (X): Saldo Rimanente da Pagare (€#,##0.00)
+Col 25 (Y): Metodo Caparra (Contanti, POS / Carta, Satispay, Bonifico)
+Col 26 (Z): Data/Ora Incasso Caparra
+Col 27 (AA): Promemoria 12h Inviato (NO / Data e Ora Invio)
+Col 28 (AB): ID Evento Google Calendar
 ```
+
+---
+
+## 🎯 Gestione Caparra & Promemoria Automatico 12 Ore
+
+1. **Creazione Evento**: Ogni prenotazione nasce su Google Calendar di colore **ROSSO 🔴** con stato "IN ATTESA".
+2. **Link Registrazione Cassa**: Nella descrizione dell'evento su Calendar è presente il link rapido per l'operatore:
+   - Apre una schermata per inserire l'importo caparra (es. 50 €) e il metodo (Contanti, POS, ecc.).
+   - Ricalcola all'istante il **Saldo Rimanente da incassare alla festa**.
+   - Cambia automaticamente il colore dell'evento da **ROSSO a VERDE 🟢**.
+   - Invia la ricevuta via email al genitore e disattiva il sollecito.
+3. **Promemoria Automatico a 12 Ore**:
+   - Una procedura a tempo controlla ogni 30 minuti le prenotazioni.
+   - Se dopo 12 ore dalla prenotazione la caparra non è ancora versata, invia la mail di memorandum amichevole per ricordare di passare entro 2-3 giorni.
+   - Per attivare il controllo, basta eseguire una volta sola la funzione `setupDepositTrigger()` in Apps Script (o chiamare l'endpoint con parametro `?action=setup_trigger`).
 
 ---
 
@@ -66,7 +88,7 @@ Col 21 (U): Dettagli Allergie (Specifica delle intolleranze comunicate)
 2. **Ricalcolo Prezzi Autorevole:** Il prezzo finale viene ricalcolato dal backend in base al listino ufficiale, eliminando il rischio di price tampering dal browser.
 3. **Protezione da Formula Injection:** Ogni stringa salvata su Google Sheets viene sanificata per prevenire l'esecuzione di formule malevole (`=`, `+`, `-`, `@`).
 4. **Isolamento Notifiche Email:** Gli errori di quota o invio email non compromettono il salvataggio su database e calendario.
-5. **Buffer di Pulizia Simmetrico:** Controllo di disponibilità a 30 minuti prima e dopo per garantire il setup delle piste.
+5. **Buffer di Pulizia Piste (15 minuti):** Controllo di disponibilità basato sulla durata effettiva scelta dal genitore + 15 minuti obbligatori di rassetto/pulizia piste per il turno successivo (slot fisse: 16:00, 17:15, 18:30, 19:45; ultima partenza consentita: ore 19:45).
 6. **GDPR & Privacy:** Informativa completa visualizzabile direttamente nel form.
 7. **Rimozione Passaggio WhatsApp:** Flusso semplificato con scheda di conferma chiara e senza countdown forzati.
 
