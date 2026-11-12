@@ -796,7 +796,7 @@ function renderPayForm(e) {
             </div>
             
             <p style="color:#475569; font-size:14px;">L'evento su Google Calendar è confermato in <strong style="color:#16a34a;">VERDE (${cognome} - ${ora} CAPARRA OK)</strong>.</p>
-            <a href="https://calendar.google.com/calendar/r" target="_top" class="btn-cal">👉 Torna a Google Calendar</a>
+            <button type="button" onclick="window.top.close(); window.close();" class="btn-cal" style="width:100%; border:none; cursor:pointer;">✖ Chiudi questa scheda</button>
           </div>
         </div>
       </body>
@@ -910,7 +910,7 @@ function renderPayForm(e) {
             <strong id="resCalTitle">${cognome} - ${ora} (CAPARRA OK)</strong>
           </p>
 
-          <a href="https://calendar.google.com/calendar/r" target="_top" class="btn-cal">👉 Torna a Google Calendar</a>
+          <button type="button" onclick="window.top.close(); window.close();" class="btn-cal" style="width:100%; border:none; cursor:pointer;">✖ Chiudi questa scheda</button>
         </div>
       </div>
 
@@ -938,6 +938,10 @@ function renderPayForm(e) {
           if (res.updatedTitle) {
             document.getElementById('resCalTitle').textContent = res.updatedTitle;
           }
+          setTimeout(function() {
+            try { window.top.close(); } catch (e) {}
+            try { window.close(); } catch (e) {}
+          }, 800);
         }
 
         function showError(msg) {

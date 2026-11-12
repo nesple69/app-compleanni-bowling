@@ -18,8 +18,13 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 
+    html {
+      background-color: #0f172a;
+    }
+
     body {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      background-color: #0f172a;
+      background-image: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -36,12 +41,6 @@
       overflow: hidden;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
       position: relative;
-      animation: fadeIn 0.25s ease-out;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px) scale(0.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     .card-header {
@@ -475,16 +474,12 @@
       </div>
 
       <div class="redirect-timer" id="redirectMsg">
-        Riapertura Google Calendar in <b id="timerCount">3</b> secondi...
+        Chiusura automatica della scheda in corso...
       </div>
 
-      <a href="https://calendar.google.com/calendar/r" class="btn-calendar" id="btnGoCalendar">
-        👉 Torna a Google Calendar Subito
-      </a>
-
-      <div>
-        <button class="btn-close-tab" onclick="window.close()">Oppure chiudi questa scheda</button>
-      </div>
+      <button type="button" class="btn-calendar" id="btnGoCalendar" onclick="closeCassaTab()">
+        ✖ Chiudi questa scheda e torna al Calendario
+      </button>
     </div>
   </div>
 
@@ -693,18 +688,21 @@
       }
     }
 
+    function closeCassaTab() {
+      try {
+        window.open('', '_self');
+        window.close();
+      } catch (e) {}
+      try {
+        window.close();
+      } catch (e) {}
+    }
+
     function startRedirectCountdown() {
-      let seconds = 3;
-      const timerEl = document.getElementById('timerCount');
-      const interval = setInterval(() => {
-        seconds--;
-        if (timerEl) timerEl.textContent = seconds;
-        if (seconds <= 0) {
-          clearInterval(interval);
-          // Riapre Google Calendar: la scheda ricaricata mostrerà il pallino verde e il titolo aggiornato!
-          window.location.href = 'https://calendar.google.com/calendar/r';
-        }
-      }, 1000);
+      // Chiude automaticamente la scheda dopo 800ms così non resta aperta una doppia scheda di Google Calendar
+      setTimeout(() => {
+        closeCassaTab();
+      }, 800);
     }
   </script>
 </body>
