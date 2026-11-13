@@ -72,6 +72,23 @@ function isClosedHoliday(year, month, day) {
   return false;
 }
 
+/**
+ * Festivi nazionali italiani aperti (esclusi quelli chiusi di default):
+ * 6 Gennaio (Epifania), 25 Aprile, 1 Maggio, 2 Giugno, 15 Agosto, 1 Novembre, 8 Dicembre.
+ * Su questi giorni è disponibile esclusivamente la fascia delle 19:30.
+ */
+function isOpenHoliday(year, month, day) {
+  return (
+    (month === 1  && day === 6)  || // Epifania
+    (month === 4  && day === 25) || // Liberazione
+    (month === 5  && day === 1)  || // Festa dei Lavoratori
+    (month === 6  && day === 2)  || // Festa della Repubblica
+    (month === 8  && day === 15) || // Ferragosto
+    (month === 11 && day === 1)  || // Tutti i Santi
+    (month === 12 && day === 8)     // Immacolata Concezione
+  );
+}
+
 
 // ============================================================
 // NAVIGAZIONE
@@ -390,6 +407,9 @@ const SLOT_RULES = [
 function getSlotRulesForIsoDate(isoDate) {
   if (!isoDate) return SLOT_RULES.filter(r => r.days.includes(6));
   const [y, m, d] = String(isoDate).split('-').map(Number);
+  if (isOpenHoliday(y, m, d)) {
+    return SLOT_RULES.filter(r => r.time === '19:30');
+  }
   const dow = new Date(y, m - 1, d, 12, 0, 0).getDay();
   return SLOT_RULES.filter(r => r.days.includes(dow));
 }
@@ -398,15 +418,28 @@ function getSlotsForIsoDate(isoDate) {
   return getSlotRulesForIsoDate(isoDate).map(r => r.time);
 }
 
-// Helper per rimuovere la vecchia regola di chiusura fissa del mercoledì
+// Helper per rimuovere la vecchia regola di chiusura fissa del mercoledì e applicare regola festivi (solo 19:30)
 function sanitizeMonthDays(days) {
   if (!days || typeof days !== 'object') return days;
   Object.keys(days).forEach(dateStr => {
     const item = days[dateStr];
-    if (item && item.status === 'closed' && item.label && /mercoled/i.test(item.label)) {
+    if (!item) return;
+    if (item.status === 'closed' && item.label && /mercoled/i.test(item.label)) {
       item.status = 'available';
       item.label = 'Disponibile';
       item.slots = (item.slots && item.slots.length > 0) ? item.slots : getSlotsForIsoDate(dateStr);
+    }
+    const parts = String(dateStr).split('-').map(Number);
+    if (parts.length === 3 && isOpenHoliday(parts[0], parts[1], parts[2]) && Array.isArray(item.slots)) {
+      item.slots = item.slots.filter(t => t === '19:30');
+      if (item.status === 'available') {
+        if (item.slots.length === 0) {
+          item.status = 'full';
+          item.label = 'Tutto Pieno';
+        } else {
+          item.label = '1 orario libero';
+        }
+      }
     }
   });
   return days;
@@ -415,7 +448,7 @@ function sanitizeMonthDays(days) {
 let monthAvailabilityController = null;
 
 function getMonthCacheKey(year, month) {
-  return `bv_cal_${year}_${month}_v6`;
+  return `bv_cal_${year}_${month}_v7`;
 }
 
 function getSelectedDurationKey() {

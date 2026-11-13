@@ -59,7 +59,13 @@ function getSlotsForDayOfWeek(dayOfWeek) {
 /** Elenco orari prenotabili per una data ISO (YYYY-MM-DD) */
 function getSlotsForIsoDate(isoDate) {
   const p = String(isoDate).split('-');
-  const d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10), 12, 0, 0);
+  const y = parseInt(p[0], 10);
+  const m = parseInt(p[1], 10);
+  const day = parseInt(p[2], 10);
+  if (isOpenHoliday(y, m, day)) {
+    return ['19:30'];
+  }
+  const d = new Date(y, m - 1, day, 12, 0, 0);
   return getSlotsForDayOfWeek(d.getDay());
 }
 
@@ -139,6 +145,23 @@ function isClosedHoliday(year, month, day) {
   if (month === (mondayDate.getMonth() + 1) && day === mondayDate.getDate()) return true; // Pasquetta
 
   return false;
+}
+
+/**
+ * Festivi nazionali italiani aperti (esclusi quelli chiusi di default):
+ * 6 Gennaio (Epifania), 25 Aprile, 1 Maggio, 2 Giugno, 15 Agosto, 1 Novembre, 8 Dicembre.
+ * Su questi giorni è disponibile esclusivamente la fascia delle 19:30.
+ */
+function isOpenHoliday(year, month, day) {
+  return (
+    (month === 1  && day === 6)  || // Epifania
+    (month === 4  && day === 25) || // Liberazione
+    (month === 5  && day === 1)  || // Festa dei Lavoratori
+    (month === 6  && day === 2)  || // Festa della Repubblica
+    (month === 8  && day === 15) || // Ferragosto
+    (month === 11 && day === 1)  || // Tutti i Santi
+    (month === 12 && day === 8)     // Immacolata Concezione
+  );
 }
 
 /** Sanitizza stringhe per prevenire HTML Injection nelle email */
@@ -223,7 +246,7 @@ function doGet(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
 
-      const cacheKey = 'cal_avail_v3_' + year + '_' + month;
+      const cacheKey = 'cal_avail_v4_' + year + '_' + month;
       const cache    = CacheService.getScriptCache();
       const cached   = cache.get(cacheKey);
 
@@ -337,7 +360,7 @@ function invalidateMonthAvailabilityCache(isoDate) {
     if (parts.length < 2) return;
     const year  = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10);
-    CacheService.getScriptCache().remove('cal_avail_v3_' + year + '_' + month);
+    CacheService.getScriptCache().remove('cal_avail_v4_' + year + '_' + month);
   } catch (e) {}
 }
 
@@ -369,7 +392,7 @@ function buildMonthDaysMap(events, year, month, durationHours, numDays, todayDat
     }
 
     const dayOfWeek      = new Date(year, month - 1, day, 12, 0, 0).getDay();
-    const candidateSlots = getSlotsForDayOfWeek(dayOfWeek);
+    const candidateSlots = isOpenHoliday(year, month, day) ? ['19:30'] : getSlotsForDayOfWeek(dayOfWeek);
     const availableSlots = [];
 
     for (let s = 0; s < candidateSlots.length; s++) {
