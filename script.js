@@ -357,10 +357,17 @@ const MONTH_NAMES_IT = [
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
 ];
 
+const MIN_15_SLOTS = ['17:00', '18:15'];
+
+function getMinParticipantsForSelectedSlot() {
+  const selectedTime = document.querySelector('input[name="fascia_oraria"]:checked')?.value || '';
+  return MIN_15_SLOTS.includes(selectedTime) ? 15 : 10;
+}
+
 function updateMinParticipants() {
   const partInput = document.getElementById('partecipanti');
   if (!partInput) return;
-  const min = 10;
+  const min = getMinParticipantsForSelectedSlot();
   partInput.min = min;
   const currentVal = parseInt(partInput.value, 10);
   if (isNaN(currentVal) || currentVal < min) {
@@ -810,7 +817,16 @@ function init() {
   }
 
   // --- Costo in tempo reale e riverifica disponibilità ---
-  document.getElementById('partecipanti').addEventListener('input', updateRealTimeCost);
+  const partEl = document.getElementById('partecipanti');
+  partEl.addEventListener('input', updateRealTimeCost);
+  partEl.addEventListener('change', () => {
+    const min = getMinParticipantsForSelectedSlot();
+    const val = parseInt(partEl.value, 10);
+    if (isNaN(val) || val < min) {
+      partEl.value = min;
+      updateRealTimeCost();
+    }
+  });
   document.getElementsByName('durata').forEach(el => el.addEventListener('change', () => {
     updateRealTimeCost();
     // Rigenera il calendario con la nuova durata selezionata
@@ -881,9 +897,9 @@ function init() {
       return;
     }
 
-    const minRequired = 10;
+    const minRequired = getMinParticipantsForSelectedSlot();
     if (partNum < minRequired) {
-      showCustomAlert(`Il numero minimo per prenotare una festa è di ${minRequired} persone.`);
+      showCustomAlert(`Per l'orario selezionato il numero minimo è di ${minRequired} partecipanti.`);
       part.classList.add('shake');
       setTimeout(() => part.classList.remove('shake'), 400);
       return;
