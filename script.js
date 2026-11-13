@@ -405,26 +405,38 @@ function sanitizeMonthDays(days) {
   return days;
 }
 
-async function fetchMonthAvailability(year, month) {
-  let selectedDuration = '1.5';
-  document.getElementsByName('durata').forEach(r => {
-    if (r.checked) selectedDuration = r.value.replace('h', '');
-  });
+let monthAvailabilityController = null;
 
-  const cacheKey = `bv_cal_${year}_${month}_${selectedDuration}h_v5`;
-  // 1. Memoria rapida
-  if (monthAvailabilityCache[cacheKey]) {
-    return sanitizeMonthDays(monthAvailabilityCache[cacheKey]);
+function getMonthCacheKey(year, month) {
+  return `bv_cal_${year}_${month}_v6`;
+}
+
+function getSelectedDurationKey() {
+  return (document.querySelector('input[name="durata"]:checked')?.value || '1.5h').replace('h', '');
+}
+
+function readCachedMonthForDuration(year, month, durationKey) {
+  const cacheKey = getMonthCacheKey(year, month);
+  let entry = monthAvailabilityCache[cacheKey];
+  if (!entry) {
+    try {
+      const sCached = sessionStorage.getItem(cacheKey);
+      if (sCached) {
+        entry = JSON.parse(sCached);
+        monthAvailabilityCache[cacheKey] = entry;
+      }
+    } catch (e) {}
   }
-  // 2. SessionStorage per navigazione istantanea a 0 ms
-  try {
-    const sCached = sessionStorage.getItem(cacheKey);
-    if (sCached) {
-      const parsed = sanitizeMonthDays(JSON.parse(sCached));
-      monthAvailabilityCache[cacheKey] = parsed;
-      return parsed;
-    }
-  } catch (e) {}
+  if (entry && entry[durationKey]) {
+    return sanitizeMonthDays(entry[durationKey]);
+  }
+  return null;
+}
+
+async function fetchMonthAvailability(year, month, signal) {
+  const selectedDuration = getSelectedDurationKey();
+  const cachedDays = readCachedMonthForDuration(year, month, selectedDuration);
+  if (cachedDays) return cachedDays;
 
   try {
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -433,21 +445,37 @@ async function fetchMonthAvailability(year, month) {
       : SCRIPT_URL;
 
     const url = `${baseUrl}?action=month_availability&year=${year}&month=${month}&duration=${selectedDuration}&_t=${Date.now()}`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    if (data && data.success && data.days) {
-      const sanitizedDays = sanitizeMonthDays(data.days);
-      monthAvailabilityCache[cacheKey] = sanitizedDays;
+
+    if (data && data.success && (data.byDuration || data.days)) {
+      const cacheKey = getMonthCacheKey(year, month);
+      const existing = monthAvailabilityCache[cacheKey] || {};
+      const byDuration = data.byDuration
+        ? data.byDuration
+        : { ...existing, [selectedDuration]: data.days };
+
+      monthAvailabilityCache[cacheKey] = byDuration;
       try {
-        sessionStorage.setItem(cacheKey, JSON.stringify(sanitizedDays));
+        sessionStorage.setItem(cacheKey, JSON.stringify(byDuration));
       } catch (e) {}
-      return sanitizedDays;
+
+      const days = byDuration[selectedDuration] || byDuration['1.5'] || data.days;
+      return sanitizeMonthDays(days);
     }
   } catch (err) {
+    if (err && err.name === 'AbortError') return null;
     console.warn('Recupero disponibilità mensile non riuscito, uso fallback locale:', err);
   }
   return null;
+}
+
+function prefetchNextMonth(year, month) {
+  const nextYear  = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  if (readCachedMonthForDuration(nextYear, nextMonth, getSelectedDurationKey())) return;
+  fetchMonthAvailability(nextYear, nextMonth);
 }
 
 async function renderInteractiveCalendar(year, month) {
@@ -524,35 +552,60 @@ async function renderInteractiveCalendar(year, month) {
   }
 
   // Sincronizzazione in background non bloccante con Google Calendar
-  fetchMonthAvailability(year, month).then(daysData => {
-    if (!daysData) return;
+  if (monthAvailabilityController) {
+    monthAvailabilityController.abort();
+  }
+  monthAvailabilityController = new AbortController();
+  const controller = monthAvailabilityController;
+
+  fetchMonthAvailability(year, month, controller.signal).then(daysData => {
+    if (!daysData || controller !== monthAvailabilityController) return;
+    let selectedBecameUnavailable = false;
+    let firstAvailDate = null;
+
     for (let day = 1; day <= numDays; day++) {
       const isoDate = `${year}-${pad(month)}-${pad(day)}`;
       const cell    = dayCells[isoDate];
       if (!cell || isoDate < todayISO) continue;
 
-      if (daysData[isoDate]) {
-        const info = daysData[isoDate];
-        cell.classList.remove('available', 'full', 'closed');
-        if (info.status === 'available') {
-          cell.classList.add('available');
-          cell.title = info.label || 'Disponibile';
-          cell.onclick = () => selectCalendarDate(isoDate, info.slots);
-          // Se l'utente ha già selezionato questa data, aggiorna gli slot orari
-          if (isoDate === selectedDateISO) {
-            renderTimeSlots(isoDate, info.slots);
-          }
-        } else if (info.status === 'full') {
-          cell.classList.add('full');
-          cell.title = 'Tutto Pieno';
-          cell.onclick = null;
-        } else {
-          cell.classList.add('closed');
-          cell.title = info.label || 'Chiuso';
-          cell.onclick = null;
+      const info = daysData[isoDate];
+      if (!info) continue;
+
+      cell.classList.remove('available', 'full', 'closed');
+      if (info.status === 'available') {
+        if (!firstAvailDate) firstAvailDate = isoDate;
+        cell.classList.add('available');
+        cell.title = info.label || 'Disponibile';
+        cell.onclick = () => selectCalendarDate(isoDate, info.slots);
+        if (isoDate === selectedDateISO) {
+          renderTimeSlots(isoDate, info.slots);
+        }
+      } else {
+        cell.classList.add(info.status === 'full' ? 'full' : 'closed');
+        cell.title = info.status === 'full' ? 'Tutto Pieno' : (info.label || 'Chiuso');
+        cell.onclick = null;
+        if (isoDate === selectedDateISO) {
+          selectedBecameUnavailable = true;
         }
       }
     }
+
+    if (selectedBecameUnavailable) {
+      if (firstAvailDate) {
+        selectCalendarDate(firstAvailDate, daysData[firstAvailDate].slots);
+      } else {
+        const msg = document.getElementById('availability-msg');
+        if (msg) {
+          msg.textContent = '❌ Nessuna disponibilità nella data selezionata.';
+          msg.dataset.available = 'false';
+        }
+        const nextBtn = document.getElementById('nextFromStep2ToStep1');
+        if (nextBtn) nextBtn.disabled = true;
+      }
+    }
+
+    // Pre-carica in silenzio il mese successivo per rendere istantaneo il cambio mese
+    prefetchNextMonth(year, month);
   });
 }
 
@@ -640,107 +693,6 @@ function renderTimeSlots(isoDate, availableSlots) {
   });
 
   updateMinParticipants();
-}
-
-
-// ============================================================
-// VERIFICA DISPONIBILITÀ SINGOLA (FALLBACK / SICUREZZA)
-// ============================================================
-
-// AbortController a scope di modulo per cancellare richieste obsolete (fix race condition)
-let currentAvailabilityController = null;
-
-async function checkAvailability() {
-  const dateStr = document.getElementById('data').value;
-  const time    = document.querySelector('input[name="fascia_oraria"]:checked')?.value;
-  const msg     = document.getElementById('availability-msg');
-  const nextBtn = document.getElementById('nextFromStep2ToStep1');
-
-  if (!dateStr || !time) return;
-
-  if (currentAvailabilityController) {
-    currentAvailabilityController.abort();
-  }
-  currentAvailabilityController = new AbortController();
-  const controller = currentAvailabilityController;
-
-  msg.textContent          = '⏳ Verifica disponibilità...';
-  msg.style.color          = '#fff';
-  msg.style.fontSize       = '1.5rem';
-  msg.dataset.available    = 'loading';
-  nextBtn.disabled         = true;
-
-  // Fix: costruttore locale per evitare il bug del fuso orario UTC
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const date       = new Date(year, month - 1, day);
-  const dayOfWeek  = date.getDay();
-  const d          = date.getDate();
-  const m          = date.getMonth() + 1;
-
-  const now              = new Date();
-  const selectedDateTime = new Date(year, month - 1, day);
-  const [hours, minutes] = time.split(':').map(Number);
-  selectedDateTime.setHours(hours, minutes, 0, 0);
-  if (selectedDateTime < now) {
-    showUnavailable('Non è possibile prenotare una data/orario già passati. Seleziona una data e orario futuri.');
-    return;
-  }
-
-  if (isClosedHoliday(year, m, d)) {
-    showUnavailable('Spiacenti, non accettiamo compleanni in questa festività (Natale, S. Stefano, Capodanno, Pasqua e Pasquetta).');
-    return;
-  }
-
-  let selectedDuration = '1.5';
-  document.getElementsByName('durata').forEach(r => {
-    if (r.checked) selectedDuration = r.value.replace('h', '');
-  });
-
-  const dateParts   = dateStr.split('-');
-  const dateItalian = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-  const timeoutId   = setTimeout(() => controller.abort(), 10000);
-
-  try {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const useLocalMock = isLocal && new URLSearchParams(window.location.search).get('mock') === '1';
-    const endpoint = useLocalMock ? `/api?date=${dateItalian}&time=${time}&duration=${selectedDuration}` : `${SCRIPT_URL}?date=${dateItalian}&time=${time}&duration=${selectedDuration}`;
-
-    const response = await fetch(
-      endpoint,
-      { signal: controller.signal }
-    );
-    clearTimeout(timeoutId);
-
-    if (controller !== currentAvailabilityController) return;
-
-    const result = await response.json();
-
-    if (result.available) {
-      msg.textContent       = '✅ Orario Disponibile!';
-      msg.style.color       = '#fff';
-      msg.dataset.available = 'true';
-      nextBtn.disabled      = false;
-    } else {
-      showUnavailable("Orario già prenotato. Scegli un'altra fascia o data.");
-    }
-  } catch (e) {
-    clearTimeout(timeoutId);
-    if (e.name === 'AbortError') return;
-    console.error('Availability check failed', e);
-    // Fix: errore di rete NON equivale a disponibile
-    msg.textContent       = '⚠️ Servizio non raggiungibile. Riprova o contattaci al 0587 420120.';
-    msg.style.color       = 'orange';
-    msg.dataset.available = 'error';
-    nextBtn.disabled      = true;
-  }
-
-  function showUnavailable(text) {
-    if (controller !== currentAvailabilityController) return;
-    msg.textContent       = '❌ ' + text;
-    msg.style.color       = '#fff';
-    msg.dataset.available = 'false';
-    nextBtn.disabled      = true;
-  }
 }
 
 

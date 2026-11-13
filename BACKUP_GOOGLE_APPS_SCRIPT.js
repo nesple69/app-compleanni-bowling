@@ -31,6 +31,9 @@ const PRICE_LANE = { '1h': 30.0, '1.5h': 45.0, '2h': 60.0, '2.5h': 75.0 };
 const PRICE_FRIES        = 2.0;
 const PRICE_CAKE_PHOTO   = 5.0;
 const MAX_PLAYERS_PER_LANE = 6;
+const CLEANING_BUFFER_MS   = 15 * 60 * 1000; // 15 minuti di pulizia e rassetto piste
+const SLOT_MARGIN_MS       = 10 * 1000;      // 10s di margine ai bordi dello slot
+const DURATION_OPTIONS     = ['1', '1.5', '2', '2.5'];
 
 // Fasce orarie ufficiali (IDENTICHE a SLOT_RULES in script.js).
 // getDay(): 0 = Domenica ... 6 = Sabato
@@ -207,11 +210,12 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 3. Richiesta disponibilità dell'intero mese (con Cache ad alta velocità)
+    // 3. Richiesta disponibilità dell'intero mese (tutte le durate in un'unica risposta/cache)
     if (action === 'month_availability') {
       const year          = parseInt(e.parameter.year, 10);
       const month         = parseInt(e.parameter.month, 10); // 1-12
       const durationHours = parseFloat(e.parameter.duration) || 1.5;
+      const durKey        = String(durationHours);
 
       if (!year || !month) {
         return ContentService
@@ -219,24 +223,29 @@ function doGet(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
 
-      // Prova a recuperare la risposta da CacheService (risposta istantanea in 150ms)
-      const cacheKey = 'cal_avail_v2_' + year + '_' + month + '_' + durationHours;
+      const cacheKey = 'cal_avail_v3_' + year + '_' + month;
       const cache    = CacheService.getScriptCache();
       const cached   = cache.get(cacheKey);
+
+      let byDuration;
       if (cached) {
-        return ContentService
-          .createTextOutput(cached)
-          .setMimeType(ContentService.MimeType.JSON);
+        byDuration = JSON.parse(cached);
+      } else {
+        byDuration = getMonthAvailabilityAllDurations(year, month);
+        try {
+          cache.put(cacheKey, JSON.stringify(byDuration), 300); // 5 minuti di cache
+        } catch (eCache) {}
       }
 
-      const monthData = getMonthAvailability(year, month, durationHours);
-      const responsePayload = JSON.stringify({ success: true, year: year, month: month, days: monthData });
-      try {
-        cache.put(cacheKey, responsePayload, 300); // 5 minuti di cache
-      } catch (eCache) {}
-
+      const days = byDuration[durKey] || byDuration['1.5'] || {};
       return ContentService
-        .createTextOutput(responsePayload)
+        .createTextOutput(JSON.stringify({
+          success:    true,
+          year:       year,
+          month:      month,
+          byDuration: byDuration,
+          days:       days
+        }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -265,123 +274,151 @@ function doGet(e) {
   }
 }
 
-// --- RECUPERO DISPONIBILITÀ MENSILE IN UN'UNICA CHIAMATA ---
-function getMonthAvailability(year, month, durationHours) {
-  const props = getProps();
-  if (!props.calendarId) return {};
+// --- HELPERS CONDIVISI PER DISPONIBILITÀ GOOGLE CALENDAR ---
+function getTargetCalendar(props, throwIfMissing) {
+  if (!props.calendarId) {
+    if (throwIfMissing) throw new Error('CALENDAR_ID non configurato nelle Proprietà dello script.');
+    return null;
+  }
+  const calendar = CalendarApp.getCalendarById(props.calendarId) || (throwIfMissing ? null : CalendarApp.getDefaultCalendar());
+  if (!calendar && throwIfMissing) {
+    throw new Error('Impossibile accedere al calendario con ID specificato.');
+  }
+  return calendar;
+}
 
-  const calendar = CalendarApp.getCalendarById(props.calendarId) || CalendarApp.getDefaultCalendar();
+/** Converte gli eventi CalendarApp in oggetti leggeri con timestamp in ms (una sola passata API) */
+function normalizeCalendarEvents(rawEvents) {
+  const normalized = [];
+  for (let i = 0; i < rawEvents.length; i++) {
+    const ev = rawEvents[i];
+    const isAllDay = ev.isAllDayEvent();
+    normalized.push({
+      isAllDay:   isAllDay,
+      startMs:    ev.getStartTime().getTime(),
+      endMs:      ev.getEndTime().getTime(),
+      titleUpper: isAllDay ? (ev.getTitle() || '').toUpperCase() : ''
+    });
+  }
+  return normalized;
+}
+
+/** Restituisce { status, label } se un evento a giorno intero blocca la giornata, altrimenti null */
+function findAllDayBlock(events, dayStartMs, dayEndMs) {
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    if (ev.isAllDay && ev.startMs < dayEndMs && ev.endMs > dayStartMs) {
+      const isClosed = ev.titleUpper.indexOf('CHIUSO') !== -1 || ev.titleUpper.indexOf('FERIE') !== -1;
+      return isClosed
+        ? { status: 'closed', label: 'Chiuso' }
+        : { status: 'full',   label: 'Tutto Pieno' };
+    }
+  }
+  return null;
+}
+
+/** Verifica che nessuno evento orario si sovrapponga allo slot [slotStartMs, slotStartMs + totalOccupiedMs] */
+function isSlotAvailable(events, slotStartMs, totalOccupiedMs) {
+  const checkStartMs = slotStartMs + SLOT_MARGIN_MS;
+  const checkEndMs   = slotStartMs + totalOccupiedMs - SLOT_MARGIN_MS;
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    if (!ev.isAllDay && ev.startMs < checkEndMs && ev.endMs > checkStartMs) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Invalida la cache mensile dopo una nuova prenotazione */
+function invalidateMonthAvailabilityCache(isoDate) {
+  try {
+    const parts = String(isoDate).split('-');
+    if (parts.length < 2) return;
+    const year  = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    CacheService.getScriptCache().remove('cal_avail_v3_' + year + '_' + month);
+  } catch (e) {}
+}
+
+/** Calcola la mappa disponibilità di un mese per una singola durata a partire dagli eventi già caricati */
+function buildMonthDaysMap(events, year, month, durationHours, numDays, todayDateStr) {
+  const pad = function(n) { return (n < 10 ? '0' : '') + n; };
+  const totalOccupiedMs = (durationHours * 60 * 60 * 1000) + CLEANING_BUFFER_MS;
+  const daysMap         = {};
+
+  for (let day = 1; day <= numDays; day++) {
+    const dStr = year + '-' + pad(month) + '-' + pad(day);
+
+    if (dStr < todayDateStr) {
+      daysMap[dStr] = { status: 'past', slots: [], label: 'Passato' };
+      continue;
+    }
+
+    if (isClosedHoliday(year, month, day)) {
+      daysMap[dStr] = { status: 'closed', slots: [], label: 'Festivo' };
+      continue;
+    }
+
+    const dayStartMs = new Date(year, month - 1, day, 0, 0, 0).getTime();
+    const dayEndMs   = new Date(year, month - 1, day, 23, 59, 59).getTime();
+    const dayBlock   = findAllDayBlock(events, dayStartMs, dayEndMs);
+    if (dayBlock) {
+      daysMap[dStr] = { status: dayBlock.status, slots: [], label: dayBlock.label };
+      continue;
+    }
+
+    const dayOfWeek      = new Date(year, month - 1, day, 12, 0, 0).getDay();
+    const candidateSlots = getSlotsForDayOfWeek(dayOfWeek);
+    const availableSlots = [];
+
+    for (let s = 0; s < candidateSlots.length; s++) {
+      const parts = candidateSlots[s].split(':');
+      const slotStartMs = new Date(year, month - 1, day, parseInt(parts[0], 10), parseInt(parts[1], 10), 0).getTime();
+      if (isSlotAvailable(events, slotStartMs, totalOccupiedMs)) {
+        availableSlots.push(candidateSlots[s]);
+      }
+    }
+
+    daysMap[dStr] = availableSlots.length > 0
+      ? {
+          status: 'available',
+          slots:  availableSlots,
+          label:  availableSlots.length === 1 ? '1 orario libero' : availableSlots.length + ' orari liberi'
+        }
+      : { status: 'full', slots: [], label: 'Tutto Pieno' };
+  }
+
+  return daysMap;
+}
+
+// --- RECUPERO DISPONIBILITÀ MENSILE PER TUTTE LE DURATE IN UN'UNICA CHIAMATA ---
+function getMonthAvailabilityAllDurations(year, month) {
+  const calendar = getTargetCalendar(getProps(), false);
   if (!calendar) return {};
 
   const firstDay = new Date(year, month - 1, 1, 0, 0, 0);
   const numDays  = new Date(year, month, 0).getDate();
   const lastDay  = new Date(year, month - 1, numDays, 23, 59, 59);
 
-  // Una sola lettura da Google Calendar per tutto il mese
-  const allEvents = calendar.getEvents(firstDay, lastDay);
+  // Una sola lettura da Google Calendar per tutto il mese, normalizzata in memoria
+  const events = normalizeCalendarEvents(calendar.getEvents(firstDay, lastDay));
 
   const now = new Date();
   const pad = function(n) { return (n < 10 ? '0' : '') + n; };
   const todayDateStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
 
-  const bufferMs = 30 * 60 * 1000;
-  const daysMap  = {};
-
-  for (let day = 1; day <= numDays; day++) {
-    const dStr       = year + '-' + pad(month) + '-' + pad(day);
-    const dayDate    = new Date(year, month - 1, day, 12, 0, 0);
-    const dayOfWeek  = dayDate.getDay(); // 0=Dom, 3=Mer
-
-    // Giorni nel passato
-    if (dStr < todayDateStr) {
-      daysMap[dStr] = { status: 'past', slots: [], label: 'Passato' };
-      continue;
-    }
-
-    // Chiusura per festività speciali di default (Natale, S. Stefano, Capodanno, Pasqua e Pasquetta)
-    if (isClosedHoliday(year, month, day)) {
-      daysMap[dStr] = { status: 'closed', slots: [], label: 'Festivo' };
-      continue;
-    }
-
-    // Controllo eventi a giorno intero da calendario
-    const dayStart = new Date(year, month - 1, day, 0, 0, 0);
-    const dayEnd   = new Date(year, month - 1, day, 23, 59, 59);
-    let isDayBlocked = false;
-    let blockStatus  = 'full';
-    let blockLabel   = 'Tutto Pieno';
-
-    for (let i = 0; i < allEvents.length; i++) {
-      const ev = allEvents[i];
-      if (ev.isAllDayEvent() && ev.getStartTime() < dayEnd && ev.getEndTime() > dayStart) {
-        isDayBlocked = true;
-        const title = (ev.getTitle() || '').toUpperCase();
-        if (title.indexOf('CHIUSO') !== -1 || title.indexOf('FERIE') !== -1) {
-          blockStatus = 'closed';
-          blockLabel  = 'Chiuso';
-        } else {
-          blockStatus = 'full';
-          blockLabel  = 'Tutto Pieno';
-        }
-        break;
-      }
-    }
-
-    if (isDayBlocked) {
-      daysMap[dStr] = { status: blockStatus, slots: [], label: blockLabel };
-      continue;
-    }
-
-    // Slot ufficiali Bowling Valdera in base al giorno (Lun-Ven: 17:00, 18:15, 19:30 | Sab: 16:00, 17:15, 18:30, 19:45 | Dom: 19:30)
-    const candidateSlots = getSlotsForDayOfWeek(dayOfWeek);
-    const availableSlots = [];
-    const CLEANING_BUFFER_MS = 15 * 60 * 1000; // 15 minuti di pulizia e rassetto piste
-
-    for (let s = 0; s < candidateSlots.length; s++) {
-      const parts = candidateSlots[s].split(':');
-      const hour  = parseInt(parts[0], 10);
-      const min   = parseInt(parts[1], 10);
-
-      const slotStart  = new Date(year, month - 1, day, hour, min, 0);
-      // Il tempo occupato sulle piste comprende la durata di gioco + 15 min di rassetto obbligatorio
-      const totalOccupiedMs   = (durationHours * 60 * 60 * 1000) + CLEANING_BUFFER_MS;
-      const slotEndWithBuffer = new Date(slotStart.getTime() + totalOccupiedMs);
-
-      // Margine di 10 secondi per consentire l'inizio esatto al termine della pulizia del turno precedente
-      const checkStart = new Date(slotStart.getTime() + 10000);
-      const checkEnd   = new Date(slotEndWithBuffer.getTime() - 10000);
-
-      let conflict = false;
-      for (let e = 0; e < allEvents.length; e++) {
-        const ev = allEvents[e];
-        if (ev.isAllDayEvent()) continue;
-        if (ev.getStartTime() < checkEnd && ev.getEndTime() > checkStart) {
-          conflict = true;
-          break;
-        }
-      }
-
-      if (!conflict) {
-        availableSlots.push(candidateSlots[s]);
-      }
-    }
-
-    if (availableSlots.length > 0) {
-      daysMap[dStr] = {
-        status: 'available',
-        slots: availableSlots,
-        label: availableSlots.length === 1 ? '1 orario libero' : availableSlots.length + ' orari liberi'
-      };
-    } else {
-      daysMap[dStr] = {
-        status: 'full',
-        slots: [],
-        label: 'Tutto Pieno'
-      };
-    }
+  const byDuration = {};
+  for (let i = 0; i < DURATION_OPTIONS.length; i++) {
+    const durKey = DURATION_OPTIONS[i];
+    byDuration[durKey] = buildMonthDaysMap(events, year, month, parseFloat(durKey), numDays, todayDateStr);
   }
+  return byDuration;
+}
 
-  return daysMap;
+function getMonthAvailability(year, month, durationHours) {
+  const all = getMonthAvailabilityAllDurations(year, month);
+  return all[String(durationHours)] || all['1.5'] || {};
 }
 
 // =========================================================================
@@ -474,6 +511,7 @@ function doPost(e) {
     if (eventId) {
       sheet.getRange(lastRow, 28).setValue(eventId);
     }
+    invalidateMonthAvailabilityCache(isoDate);
 
     // 5. Invio email iniziale di riepilogo al cliente e notifica alla sede
     sendConfirmationEmail(data, props);
@@ -497,54 +535,29 @@ function doPost(e) {
 
 // --- VERIFICA DISPONIBILITÀ CALENDARIO ---
 function checkCalendarAvailability(dateStr, timeStr, durationHours) {
-  const props = getProps();
-  if (!props.calendarId) {
-    throw new Error('CALENDAR_ID non configurato nelle Proprietà dello script.');
-  }
+  const calendar = getTargetCalendar(getProps(), true);
 
-  const calendar = CalendarApp.getCalendarById(props.calendarId);
-  if (!calendar) {
-    throw new Error('Impossibile accedere al calendario con ID specificato.');
-  }
-
-  // 0. Controllo festività speciali di default (Natale, S. Stefano, Capodanno, Pasqua e Pasquetta)
+  // Controllo festività e fascia ufficiale prima di interrogare Google Calendar
   const dParts = dateStr.split('-');
-  const checkYear  = parseInt(dParts[0], 10);
-  const checkMonth = parseInt(dParts[1], 10);
-  const checkDay   = parseInt(dParts[2], 10);
-  if (isClosedHoliday(checkYear, checkMonth, checkDay)) {
+  if (isClosedHoliday(parseInt(dParts[0], 10), parseInt(dParts[1], 10), parseInt(dParts[2], 10))) {
     return false;
   }
-
-  // 0b. L'orario richiesto deve essere una fascia ufficiale per quel giorno della settimana
   if (getSlotsForIsoDate(dateStr).indexOf(timeStr) === -1) {
     return false;
   }
 
-  // 1. Controllo eventi a giorno intero
-  const dayStart     = new Date(dateStr + 'T00:00:00');
-  const dayEnd       = new Date(dateStr + 'T23:59:59');
-  const dayEvents    = calendar.getEvents(dayStart, dayEnd);
+  // Un'unica chiamata getEvents per la giornata (copre sia eventi a giorno intero sia sovrapposizioni orarie)
+  const dayStart = new Date(dateStr + 'T00:00:00');
+  const dayEnd   = new Date(dateStr + 'T23:59:59');
+  const events   = normalizeCalendarEvents(calendar.getEvents(dayStart, dayEnd));
 
-  for (let i = 0; i < dayEvents.length; i++) {
-    const ev = dayEvents[i];
-    if (ev.isAllDayEvent() && ev.getStartTime() < dayEnd && ev.getEndTime() > dayStart) {
-      return false;
-    }
+  if (findAllDayBlock(events, dayStart.getTime(), dayEnd.getTime())) {
+    return false;
   }
 
-  // 2. Controllo disponibilità fascia oraria (Durata gioco + 15 min rassetto)
-  const CLEANING_BUFFER_MS = 15 * 60 * 1000;
-  const start = new Date(dateStr + 'T' + timeStr + ':00');
+  const slotStartMs     = new Date(dateStr + 'T' + timeStr + ':00').getTime();
   const totalOccupiedMs = (durationHours * 60 * 60 * 1000) + CLEANING_BUFFER_MS;
-  const endWithBuffer   = new Date(start.getTime() + totalOccupiedMs);
-
-  // Margine di 10 secondi per consentire l'inizio immediato a fine pulizia del turno precedente
-  const checkStart = new Date(start.getTime() + 10000);
-  const checkEnd   = new Date(endWithBuffer.getTime() - 10000);
-
-  const overlappingEvents = calendar.getEvents(checkStart, checkEnd);
-  return overlappingEvents.length === 0;
+  return isSlotAvailable(events, slotStartMs, totalOccupiedMs);
 }
 
 // =========================================================================
@@ -553,7 +566,6 @@ function checkCalendarAvailability(dateStr, timeStr, durationHours) {
 function createCalendarEvent(data, props, rowNumber) {
   if (!props.calendarId) return null;
 
-  const CLEANING_BUFFER_MS = 15 * 60 * 1000;
   const isoDate         = normalizeDateToIso(data.data_festa || '');
   const start           = new Date(isoDate + 'T' + data.ora + ':00');
   const durationInHours = parseFloat(data.durata) || 1.5;
