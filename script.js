@@ -447,8 +447,10 @@ function sanitizeMonthDays(days) {
 
 let monthAvailabilityController = null;
 
+const CACHE_TTL_MS = 30 * 1000; // 30 secondi di validità cache lato client
+
 function getMonthCacheKey(year, month) {
-  return `bv_cal_${year}_${month}_v7`;
+  return `bv_cal_${year}_${month}_v8`;
 }
 
 function getSelectedDurationKey() {
@@ -467,16 +469,21 @@ function readCachedMonthForDuration(year, month, durationKey) {
       }
     } catch (e) {}
   }
-  if (entry && entry[durationKey]) {
-    return sanitizeMonthDays(entry[durationKey]);
+  if (!entry || !entry.timestamp || (Date.now() - entry.timestamp) >= CACHE_TTL_MS) {
+    return null;
+  }
+  if (entry.data && entry.data[durationKey]) {
+    return sanitizeMonthDays(entry.data[durationKey]);
   }
   return null;
 }
 
-async function fetchMonthAvailability(year, month, signal) {
+async function fetchMonthAvailability(year, month, signal, forceRefresh = false) {
   const selectedDuration = getSelectedDurationKey();
-  const cachedDays = readCachedMonthForDuration(year, month, selectedDuration);
-  if (cachedDays) return cachedDays;
+  if (!forceRefresh) {
+    const cachedDays = readCachedMonthForDuration(year, month, selectedDuration);
+    if (cachedDays) return cachedDays;
+  }
 
   try {
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -485,20 +492,21 @@ async function fetchMonthAvailability(year, month, signal) {
       : SCRIPT_URL;
 
     const url = `${baseUrl}?action=month_availability&year=${year}&month=${month}&duration=${selectedDuration}&_t=${Date.now()}`;
-    const res = await fetch(url, { signal });
+    const res = await fetch(url, { signal, cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
 
     if (data && data.success && (data.byDuration || data.days)) {
       const cacheKey = getMonthCacheKey(year, month);
-      const existing = monthAvailabilityCache[cacheKey] || {};
+      const existingData = (monthAvailabilityCache[cacheKey] && monthAvailabilityCache[cacheKey].data) || {};
       const byDuration = data.byDuration
         ? data.byDuration
-        : { ...existing, [selectedDuration]: data.days };
+        : { ...existingData, [selectedDuration]: data.days };
 
-      monthAvailabilityCache[cacheKey] = byDuration;
+      const cacheEntry = { timestamp: Date.now(), data: byDuration };
+      monthAvailabilityCache[cacheKey] = cacheEntry;
       try {
-        sessionStorage.setItem(cacheKey, JSON.stringify(byDuration));
+        sessionStorage.setItem(cacheKey, JSON.stringify(cacheEntry));
       } catch (e) {}
 
       const days = byDuration[selectedDuration] || byDuration['1.5'] || data.days;
@@ -591,61 +599,112 @@ async function renderInteractiveCalendar(year, month) {
     }
   }
 
+  currentRenderedYear = year;
+  currentRenderedMonth = month;
+  currentDayCells = dayCells;
+  startCalendarAutoRefresh();
+
   // Sincronizzazione in background non bloccante con Google Calendar
+  syncCurrentMonthAvailability(false);
+}
+
+let currentRenderedYear = null;
+let currentRenderedMonth = null;
+let currentDayCells = {};
+let calendarAutoRefreshTimer = null;
+
+function applyMonthAvailabilityToGrid(year, month, daysData, dayCells) {
+  if (!daysData || !dayCells) return;
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const todayISO = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const numDays = new Date(year, month, 0).getDate();
+
+  let selectedBecameUnavailable = false;
+  let firstAvailDate = null;
+
+  for (let day = 1; day <= numDays; day++) {
+    const isoDate = `${year}-${pad(month)}-${pad(day)}`;
+    const cell    = dayCells[isoDate];
+    if (!cell || isoDate < todayISO) continue;
+
+    const info = daysData[isoDate];
+    if (!info) continue;
+
+    cell.classList.remove('available', 'full', 'closed');
+    if (info.status === 'available') {
+      if (!firstAvailDate) firstAvailDate = isoDate;
+      cell.classList.add('available');
+      cell.title = info.label || 'Disponibile';
+      cell.onclick = () => selectCalendarDate(isoDate, info.slots);
+      if (isoDate === selectedDateISO) {
+        renderTimeSlots(isoDate, info.slots);
+      }
+    } else {
+      cell.classList.add(info.status === 'full' ? 'full' : 'closed');
+      cell.title = info.status === 'full' ? 'Tutto Pieno' : (info.label || 'Chiuso');
+      cell.onclick = null;
+      if (isoDate === selectedDateISO) {
+        selectedBecameUnavailable = true;
+      }
+    }
+  }
+
+  if (selectedBecameUnavailable) {
+    if (firstAvailDate) {
+      selectCalendarDate(firstAvailDate, daysData[firstAvailDate].slots);
+    } else {
+      const msg = document.getElementById('availability-msg');
+      if (msg) {
+        msg.textContent = '❌ Nessuna disponibilità nella data selezionata.';
+        msg.dataset.available = 'false';
+      }
+      const nextBtn = document.getElementById('nextFromStep2ToStep1');
+      if (nextBtn) nextBtn.disabled = true;
+    }
+  }
+}
+
+async function syncCurrentMonthAvailability(forceRefresh = true) {
+  if (!currentRenderedYear || !currentRenderedMonth) return;
+  const step2 = document.getElementById('step2');
+  const bookingSteps = document.getElementById('bookingSteps');
+  if (!step2 || step2.style.display === 'none') return;
+  if (bookingSteps && bookingSteps.style.display === 'none') return;
+
   if (monthAvailabilityController) {
     monthAvailabilityController.abort();
   }
   monthAvailabilityController = new AbortController();
   const controller = monthAvailabilityController;
+  const targetYear = currentRenderedYear;
+  const targetMonth = currentRenderedMonth;
+  const targetCells = currentDayCells;
 
-  fetchMonthAvailability(year, month, controller.signal).then(daysData => {
-    if (!daysData || controller !== monthAvailabilityController) return;
-    let selectedBecameUnavailable = false;
-    let firstAvailDate = null;
+  const daysData = await fetchMonthAvailability(targetYear, targetMonth, controller.signal, forceRefresh);
+  if (!daysData || controller !== monthAvailabilityController) return;
+  if (targetYear !== currentRenderedYear || targetMonth !== currentRenderedMonth) return;
 
-    for (let day = 1; day <= numDays; day++) {
-      const isoDate = `${year}-${pad(month)}-${pad(day)}`;
-      const cell    = dayCells[isoDate];
-      if (!cell || isoDate < todayISO) continue;
+  applyMonthAvailabilityToGrid(targetYear, targetMonth, daysData, targetCells);
+  prefetchNextMonth(targetYear, targetMonth);
+}
 
-      const info = daysData[isoDate];
-      if (!info) continue;
-
-      cell.classList.remove('available', 'full', 'closed');
-      if (info.status === 'available') {
-        if (!firstAvailDate) firstAvailDate = isoDate;
-        cell.classList.add('available');
-        cell.title = info.label || 'Disponibile';
-        cell.onclick = () => selectCalendarDate(isoDate, info.slots);
-        if (isoDate === selectedDateISO) {
-          renderTimeSlots(isoDate, info.slots);
-        }
-      } else {
-        cell.classList.add(info.status === 'full' ? 'full' : 'closed');
-        cell.title = info.status === 'full' ? 'Tutto Pieno' : (info.label || 'Chiuso');
-        cell.onclick = null;
-        if (isoDate === selectedDateISO) {
-          selectedBecameUnavailable = true;
-        }
-      }
+function startCalendarAutoRefresh() {
+  if (calendarAutoRefreshTimer) return;
+  calendarAutoRefreshTimer = setInterval(() => {
+    if (!document.hidden) {
+      syncCurrentMonthAvailability(true);
     }
+  }, 30000);
 
-    if (selectedBecameUnavailable) {
-      if (firstAvailDate) {
-        selectCalendarDate(firstAvailDate, daysData[firstAvailDate].slots);
-      } else {
-        const msg = document.getElementById('availability-msg');
-        if (msg) {
-          msg.textContent = '❌ Nessuna disponibilità nella data selezionata.';
-          msg.dataset.available = 'false';
-        }
-        const nextBtn = document.getElementById('nextFromStep2ToStep1');
-        if (nextBtn) nextBtn.disabled = true;
-      }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      syncCurrentMonthAvailability(true);
     }
+  });
 
-    // Pre-carica in silenzio il mese successivo per rendere istantaneo il cambio mese
-    prefetchNextMonth(year, month);
+  window.addEventListener('focus', () => {
+    syncCurrentMonthAvailability(true);
   });
 }
 
@@ -696,6 +755,8 @@ function renderTimeSlots(isoDate, availableSlots) {
   const container = document.getElementById('timeSlotsContainer');
   if (!container) return;
 
+  const previouslySelectedTime = container.querySelector('input[name="fascia_oraria"]:checked')?.value || null;
+  const keepPrevious = previouslySelectedTime && availableSlots.includes(previouslySelectedTime);
   const allPossibleSlots = getSlotRulesForIsoDate(isoDate);
 
   container.innerHTML = '';
@@ -703,7 +764,7 @@ function renderTimeSlots(isoDate, availableSlots) {
 
   allPossibleSlots.forEach((slot) => {
     const isAvail = availableSlots.includes(slot.time);
-    const shouldCheck = isAvail && !checkedOne;
+    const shouldCheck = isAvail && (keepPrevious ? slot.time === previouslySelectedTime : !checkedOne);
     if (shouldCheck) checkedOne = true;
 
     const card = document.createElement('label');

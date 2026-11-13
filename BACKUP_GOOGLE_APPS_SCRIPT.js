@@ -256,7 +256,7 @@ function doGet(e) {
       } else {
         byDuration = getMonthAvailabilityAllDurations(year, month);
         try {
-          cache.put(cacheKey, JSON.stringify(byDuration), 300); // 5 minuti di cache
+          cache.put(cacheKey, JSON.stringify(byDuration), 30); // 30 secondi di cache per aggiornamenti quasi in tempo reale
         } catch (eCache) {}
       }
 
