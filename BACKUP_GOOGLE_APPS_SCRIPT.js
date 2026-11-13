@@ -1,6 +1,6 @@
 /**
  * GOOGLE APPS SCRIPT — Bowling Valdera
- * Versione: 3.3 — Fasce orarie allineate al sito (16:00 Sab | 17:00-18:00-19:00 Lun-Sab | 19:30 Dom), link cassa su sito, caparra 12 ore
+ * Versione: 3.4 — Fasce orarie aggiornate (Lun-Ven: 17:00, 18:15, 19:30 | Sab: 16:00, 17:15, 18:30, 19:45 | Dom: 19:30)
  *
  * ISTRUZIONI PER IL DEPLOY:
  * 1. Aprire il progetto Google Apps Script collegato al Google Sheet.
@@ -32,14 +32,16 @@ const PRICE_FRIES        = 2.0;
 const PRICE_CAKE_PHOTO   = 5.0;
 const MAX_PLAYERS_PER_LANE = 6;
 
-// Fasce orarie ufficiali (IDENTICHE a SLOT_RULES nel file HTML del sito).
+// Fasce orarie ufficiali (IDENTICHE a SLOT_RULES in script.js).
 // getDay(): 0 = Domenica ... 6 = Sabato
 const SLOT_RULES = [
   { time: '16:00', days: [6] },                  // Solo Sabato
-  { time: '17:00', days: [1, 2, 3, 4, 5, 6] },   // Lun-Sab
-  { time: '18:00', days: [1, 2, 3, 4, 5, 6] },   // Lun-Sab
-  { time: '19:00', days: [1, 2, 3, 4, 5, 6] },   // Lun-Sab
-  { time: '19:30', days: [0] }                   // Solo Domenica
+  { time: '17:00', days: [1, 2, 3, 4, 5] },      // Lun-Ven
+  { time: '17:15', days: [6] },                  // Solo Sabato
+  { time: '18:15', days: [1, 2, 3, 4, 5] },      // Lun-Ven
+  { time: '18:30', days: [6] },                  // Solo Sabato
+  { time: '19:30', days: [0, 1, 2, 3, 4, 5] },   // Lun-Ven e Domenica
+  { time: '19:45', days: [6] }                   // Solo Sabato
 ];
 
 /** Elenco orari prenotabili per un giorno della settimana (0=Dom ... 6=Sab) */
@@ -218,7 +220,7 @@ function doGet(e) {
       }
 
       // Prova a recuperare la risposta da CacheService (risposta istantanea in 150ms)
-      const cacheKey = 'cal_avail_' + year + '_' + month + '_' + durationHours;
+      const cacheKey = 'cal_avail_v2_' + year + '_' + month + '_' + durationHours;
       const cache    = CacheService.getScriptCache();
       const cached   = cache.get(cacheKey);
       if (cached) {
@@ -330,7 +332,7 @@ function getMonthAvailability(year, month, durationHours) {
       continue;
     }
 
-    // Slot ufficiali Bowling Valdera in base al giorno (Sab: 16:00-19:00 | Lun-Ven: 17:00-19:00 | Dom: 19:30)
+    // Slot ufficiali Bowling Valdera in base al giorno (Lun-Ven: 17:00, 18:15, 19:30 | Sab: 16:00, 17:15, 18:30, 19:45 | Dom: 19:30)
     const candidateSlots = getSlotsForDayOfWeek(dayOfWeek);
     const availableSlots = [];
     const CLEANING_BUFFER_MS = 15 * 60 * 1000; // 15 minuti di pulizia e rassetto piste

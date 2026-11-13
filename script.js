@@ -369,6 +369,28 @@ function updateMinParticipants() {
   }
 }
 
+// Fasce orarie ufficiali per giorno della settimana (0=Dom ... 6=Sab)
+const SLOT_RULES = [
+  { time: '16:00', sub: 'Pomeriggio',       days: [6] },
+  { time: '17:00', sub: 'Pomeriggio',       days: [1, 2, 3, 4, 5] },
+  { time: '17:15', sub: 'Pomeriggio',       days: [6] },
+  { time: '18:15', sub: 'Tardo Pomeriggio', days: [1, 2, 3, 4, 5] },
+  { time: '18:30', sub: 'Tardo Pomeriggio', days: [6] },
+  { time: '19:30', sub: 'Sera',             days: [0, 1, 2, 3, 4, 5] },
+  { time: '19:45', sub: 'Sera',             days: [6] }
+];
+
+function getSlotRulesForIsoDate(isoDate) {
+  if (!isoDate) return SLOT_RULES.filter(r => r.days.includes(6));
+  const [y, m, d] = String(isoDate).split('-').map(Number);
+  const dow = new Date(y, m - 1, d, 12, 0, 0).getDay();
+  return SLOT_RULES.filter(r => r.days.includes(dow));
+}
+
+function getSlotsForIsoDate(isoDate) {
+  return getSlotRulesForIsoDate(isoDate).map(r => r.time);
+}
+
 // Helper per rimuovere la vecchia regola di chiusura fissa del mercoledì
 function sanitizeMonthDays(days) {
   if (!days || typeof days !== 'object') return days;
@@ -377,7 +399,7 @@ function sanitizeMonthDays(days) {
     if (item && item.status === 'closed' && item.label && /mercoled/i.test(item.label)) {
       item.status = 'available';
       item.label = 'Disponibile';
-      item.slots = (item.slots && item.slots.length > 0) ? item.slots : ['16:00', '17:15', '18:30', '19:45'];
+      item.slots = (item.slots && item.slots.length > 0) ? item.slots : getSlotsForIsoDate(dateStr);
     }
   });
   return days;
@@ -389,7 +411,7 @@ async function fetchMonthAvailability(year, month) {
     if (r.checked) selectedDuration = r.value.replace('h', '');
   });
 
-  const cacheKey = `bv_cal_${year}_${month}_${selectedDuration}h_v4`;
+  const cacheKey = `bv_cal_${year}_${month}_${selectedDuration}h_v5`;
   // 1. Memoria rapida
   if (monthAvailabilityCache[cacheKey]) {
     return sanitizeMonthDays(monthAvailabilityCache[cacheKey]);
@@ -459,7 +481,6 @@ async function renderInteractiveCalendar(year, month) {
   const dayCells = {};
   const pad = n => (n < 10 ? '0' : '') + n;
   const todayISO = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  const defaultSlots = ['16:00', '17:15', '18:30', '19:45'];
 
   // RENDERING ISTANTANEO (0 ms): tutti i giorni futuri sono subito attivi, verdi e cliccabili
   for (let day = 1; day <= numDays; day++) {
@@ -486,7 +507,7 @@ async function renderInteractiveCalendar(year, month) {
       // SUBITO DISPONIBILE: l'utente può cliccare immediatamente al 1° millisecondo!
       cell.classList.add('available');
       cell.title = 'Disponibile';
-      cell.onclick = () => selectCalendarDate(isoDate, defaultSlots);
+      cell.onclick = () => selectCalendarDate(isoDate, getSlotsForIsoDate(isoDate));
     }
 
     if (isoDate === selectedDateISO) {
@@ -498,7 +519,7 @@ async function renderInteractiveCalendar(year, month) {
   if (!selectedDateISO || !document.getElementById('data').value) {
     const firstAvailKey = Object.keys(dayCells).find(iso => dayCells[iso].classList.contains('available'));
     if (firstAvailKey) {
-      selectCalendarDate(firstAvailKey, defaultSlots);
+      selectCalendarDate(firstAvailKey, getSlotsForIsoDate(firstAvailKey));
     }
   }
 
@@ -562,7 +583,7 @@ function selectCalendarDate(isoDate, availableSlots) {
 
   const slots = (availableSlots && availableSlots.length > 0)
     ? availableSlots
-    : ['16:00', '17:15', '18:30', '19:45'];
+    : getSlotsForIsoDate(isoDate);
 
   renderTimeSlots(isoDate, slots);
   updateRealTimeCost();
@@ -582,12 +603,7 @@ function renderTimeSlots(isoDate, availableSlots) {
   const container = document.getElementById('timeSlotsContainer');
   if (!container) return;
 
-  const allPossibleSlots = [
-    { time: '16:00', sub: 'Pomeriggio' },
-    { time: '17:15', sub: 'Pomeriggio' },
-    { time: '18:30', sub: 'Tardo Pomeriggio' },
-    { time: '19:45', sub: 'Sera' }
-  ];
+  const allPossibleSlots = getSlotRulesForIsoDate(isoDate);
 
   container.innerHTML = '';
   let checkedOne = false;
