@@ -426,17 +426,21 @@ const MONTH_NAMES_IT = [
 const MIN_15_SLOTS_WEEKDAY  = ['17:00', '18:00']; // Lun-Ven: minimo 15 partecipanti
 const MIN_15_SLOTS_SATURDAY = ['16:00', '17:00']; // Sabato: minimo 15 partecipanti
 
-function getMinParticipantsForSelectedSlot() {
-  const selectedTime = document.querySelector('input[name="fascia_oraria"]:checked')?.value || '';
-  if (!selectedTime) return 10;
-  if (selectedDateISO) {
-    const [y, m, d] = selectedDateISO.split('-').map(Number);
+function getMinParticipantsForDateAndSlot(isoDate, timeStr) {
+  if (!timeStr) return 10;
+  if (isoDate) {
+    const [y, m, d] = isoDate.split('-').map(Number);
     const dow = new Date(y, m - 1, d, 12, 0, 0).getDay();
     if (dow === 0) return 10; // Domenica (19:30): minimo 10
-    if (dow === 6) return MIN_15_SLOTS_SATURDAY.includes(selectedTime) ? 15 : 10;
-    return MIN_15_SLOTS_WEEKDAY.includes(selectedTime) ? 15 : 10;
+    if (dow === 6) return MIN_15_SLOTS_SATURDAY.includes(timeStr) ? 15 : 10;
+    return MIN_15_SLOTS_WEEKDAY.includes(timeStr) ? 15 : 10;
   }
-  return (MIN_15_SLOTS_WEEKDAY.includes(selectedTime) || MIN_15_SLOTS_SATURDAY.includes(selectedTime)) ? 15 : 10;
+  return (MIN_15_SLOTS_WEEKDAY.includes(timeStr) || MIN_15_SLOTS_SATURDAY.includes(timeStr)) ? 15 : 10;
+}
+
+function getMinParticipantsForSelectedSlot() {
+  const selectedTime = document.querySelector('input[name="fascia_oraria"]:checked')?.value || '';
+  return getMinParticipantsForDateAndSlot(selectedDateISO, selectedTime);
 }
 
 function updateMinParticipants() {
@@ -938,11 +942,14 @@ function renderTimeSlots(isoDate, availableSlots) {
       card.style.borderColor = 'rgba(239, 68, 68, 0.4)';
     }
 
+    const minPart = getMinParticipantsForDateAndSlot(isoDate, slot.time);
+
     card.innerHTML = `
       <input type="radio" name="fascia_oraria" value="${slot.time}" ${shouldCheck ? 'checked' : ''} ${!isAvail ? 'disabled' : ''}>
       <div class="card-content">
         <span class="time-label">${slot.time}</span>
         <span class="time-sub">${isAvail ? slot.sub : '❌ Già Occupato'}</span>
+        ${isAvail ? `<span class="time-sub" style="font-size:0.75rem;font-weight:600;margin-top:2px;">Min. ${minPart} pers.</span>` : ''}
       </div>
     `;
 
