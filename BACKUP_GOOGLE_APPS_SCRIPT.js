@@ -2097,6 +2097,12 @@ function sendConfirmationEmail(data, props) {
           </p>
         </div>
 
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 5px solid #b71c1c; padding: 12px 16px; border-radius: 8px; margin: 16px 0;">
+          <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #333333;">
+            &#x23F0; <strong>Rispetto dell'orario:</strong> vi preghiamo gentilmente di arrivare puntuali all'orario prenotato per non ritardare i compleanni successivi ed evitare di dover scalare i minuti di ritardo dalla durata della vostra partita.
+          </p>
+        </div>
+
         <p style="font-size: 0.9em; color: #666; font-style: italic; text-align: center;">
           Ti aspettiamo per strike, musica, pizza e tanto divertimento!
         </p>
@@ -2152,6 +2158,8 @@ RIEPILOGO DELLA FESTA:
 - Totale Stimato: €${safeTotale}
 
 IMPORTANTE: Per la conferma di questa prenotazione è necessario versare una caparra di 50€ entro 2 o 3 giorni, la preghiamo di recarsi al Bowling Valdera per definire l'accordo.
+
+RISPETTO DELL'ORARIO: vi preghiamo gentilmente di arrivare puntuali all'orario prenotato per non ritardare i compleanni successivi ed evitare di dover scalare i minuti di ritardo dalla durata della vostra partita.
 
 Ti aspettiamo per una giornata di strike e festa!
 Bowling Valdera - Via ToscoRomagnola 127, Fornacette (PI) - Tel. 0587 420120`;
