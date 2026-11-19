@@ -111,6 +111,10 @@ function showStep(stepId) {
   const target = document.getElementById(stepId);
   if (target) target.style.display = 'block';
 
+  if (stepId === 'step3' && typeof updateAvailableDurationsForSelectedSlot === 'function') {
+    updateAvailableDurationsForSelectedSlot();
+  }
+
   // Scorri dolcemente all'inizio del form
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -419,11 +423,20 @@ const MONTH_NAMES_IT = [
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
 ];
 
-const MIN_15_SLOTS = ['17:00', '18:15'];
+const MIN_15_SLOTS_WEEKDAY  = ['17:00', '18:00']; // Lun-Ven: minimo 15 partecipanti
+const MIN_15_SLOTS_SATURDAY = ['16:00', '17:00']; // Sabato: minimo 15 partecipanti
 
 function getMinParticipantsForSelectedSlot() {
   const selectedTime = document.querySelector('input[name="fascia_oraria"]:checked')?.value || '';
-  return MIN_15_SLOTS.includes(selectedTime) ? 15 : 10;
+  if (!selectedTime) return 10;
+  if (selectedDateISO) {
+    const [y, m, d] = selectedDateISO.split('-').map(Number);
+    const dow = new Date(y, m - 1, d, 12, 0, 0).getDay();
+    if (dow === 0) return 10; // Domenica (19:30): minimo 10
+    if (dow === 6) return MIN_15_SLOTS_SATURDAY.includes(selectedTime) ? 15 : 10;
+    return MIN_15_SLOTS_WEEKDAY.includes(selectedTime) ? 15 : 10;
+  }
+  return (MIN_15_SLOTS_WEEKDAY.includes(selectedTime) || MIN_15_SLOTS_SATURDAY.includes(selectedTime)) ? 15 : 10;
 }
 
 function updateMinParticipants() {
@@ -441,12 +454,11 @@ function updateMinParticipants() {
 // Fasce orarie ufficiali per giorno della settimana (0=Dom ... 6=Sab)
 const SLOT_RULES = [
   { time: '16:00', sub: 'Pomeriggio',       days: [6] },
-  { time: '17:00', sub: 'Pomeriggio',       days: [1, 2, 3, 4, 5] },
-  { time: '17:15', sub: 'Pomeriggio',       days: [6] },
-  { time: '18:15', sub: 'Tardo Pomeriggio', days: [1, 2, 3, 4, 5] },
-  { time: '18:30', sub: 'Tardo Pomeriggio', days: [6] },
-  { time: '19:30', sub: 'Sera',             days: [0, 1, 2, 3, 4, 5] },
-  { time: '19:45', sub: 'Sera',             days: [6] }
+  { time: '17:00', sub: 'Pomeriggio',       days: [1, 2, 3, 4, 5, 6] },
+  { time: '18:00', sub: 'Tardo Pomeriggio', days: [1, 2, 3, 4, 5, 6] },
+  { time: '19:00', sub: 'Sera',             days: [1, 2, 3, 4, 5, 6] },
+  { time: '19:30', sub: 'Sera',             days: [0] },
+  { time: '20:00', sub: 'Sera',             days: [1, 2, 3, 4, 5, 6] }
 ];
 
 function getSlotRulesForIsoDate(isoDate) {
@@ -499,7 +511,8 @@ const CACHE_TTL_MS        = 60 * 1000;            // 60 s: dato considerato aggi
 const STALE_MAX_AGE_MS    = 24 * 60 * 60 * 1000;  // 24 h: dato mostrabile in attesa dell'aggiornamento
 const AUTO_REFRESH_MS     = 60 * 1000;            // refresh automatico mentre il calendario è visibile
 const MONTH_CACHE_PREFIX  = 'bv_cal_';
-const MONTH_CACHE_VERSION = 'v9';
+const MONTH_CACHE_VERSION = 'v10';
+const CALENDAR_BASE_DURATION = '1'; // Allo Step 1 mostra tutti gli orari in cui entra almeno 1 ora; le durate si filtrano allo Step 5
 
 const monthFetchInFlight = {};   // richieste in corso per mese (evita doppioni)
 let calendarDataVerified = false; // true quando la griglia mostra dati reali aggiornati
@@ -732,9 +745,9 @@ async function renderInteractiveCalendar(year, month) {
   currentRenderedMonth = month;
   currentDayCells      = dayCells;
 
-  // Dati già noti (cache locale anche di qualche ora fa): applicati SUBITO, senza attendere il server
+  // Dati già noti (cache locale anche di qualche ora fa): applicati SUBITO usando durata base 1h
   const cachedEntry = readMonthEntry(year, month);
-  const cachedDays  = isEntryUsable(cachedEntry) ? getDaysFromEntry(cachedEntry, getSelectedDurationKey()) : null;
+  const cachedDays  = isEntryUsable(cachedEntry) ? getDaysFromEntry(cachedEntry, CALENDAR_BASE_DURATION) : null;
   calendarDataVerified = !!(cachedDays && isEntryFresh(cachedEntry));
 
   // Pre-seleziona subito la prima data disponibile
@@ -828,10 +841,11 @@ async function syncCurrentMonthAvailability(forceRefresh = false) {
   // L'utente ha cambiato mese/durata nel frattempo: la griglia è stata ricreata
   if (targetYear !== currentRenderedYear || targetMonth !== currentRenderedMonth || targetCells !== currentDayCells) return;
 
-  const daysData = getDaysFromEntry(entry, getSelectedDurationKey());
+  const daysData = getDaysFromEntry(entry, CALENDAR_BASE_DURATION);
   if (!daysData) return;
 
   applyMonthAvailabilityToGrid(targetYear, targetMonth, daysData, targetCells);
+  updateAvailableDurationsForSelectedSlot();
   calendarDataVerified = isEntryFresh(entry);
   refreshAvailabilityMsg();
 }
@@ -887,9 +901,9 @@ function selectCalendarDate(isoDate, availableSlots) {
     ? availableSlots
     : getSlotsForIsoDate(isoDate);
 
+  updateDurationLabels();
   renderTimeSlots(isoDate, slots);
   updateRealTimeCost();
-  updateDurationLabels();
 
   const msg = document.getElementById('availability-msg');
   if (msg) {
@@ -938,11 +952,100 @@ function renderTimeSlots(isoDate, availableSlots) {
   container.querySelectorAll('input[name="fascia_oraria"]').forEach(input => {
     input.addEventListener('change', () => {
       updateMinParticipants();
+      updateAvailableDurationsForSelectedSlot();
       updateRealTimeCost();
     });
   });
 
   updateMinParticipants();
+  updateAvailableDurationsForSelectedSlot();
+}
+
+/**
+ * Abilita allo Step 5 (Durata) solo le durate effettivamente compatibili
+ * con la data e l'orario selezionati allo Step 1, in base ai dati di Google Calendar.
+ * Esempio: se c'è un buco 18:00-19:00, lascia attiva solo "1 Ora" e disabilita 1.5h / 2h / 2.5h.
+ */
+function updateAvailableDurationsForSelectedSlot() {
+  const durationInputs = Array.from(document.getElementsByName('durata'));
+  if (!durationInputs.length) return;
+
+  const defaultPrices = {
+    '1h':   '30€ / Pista',
+    '1.5h': '45€ / Pista',
+    '2h':   '60€ / Pista',
+    '2.5h': '75€ / Pista'
+  };
+  const priceIds = {
+    '1h':   'price-durata-1h',
+    '1.5h': 'price-durata-1-5h',
+    '2h':   'price-durata-2h',
+    '2.5h': 'price-durata-2-5h'
+  };
+
+  const selectedTime = document.querySelector('input[name="fascia_oraria"]:checked')?.value || '';
+  const noteEl = document.getElementById('durationAvailabilityNote');
+
+  // Recupera la cache del mese della data selezionata
+  let byDuration = null;
+  if (selectedDateISO && selectedTime) {
+    const [y, m] = selectedDateISO.split('-').map(Number);
+    const entry = (y && m) ? readMonthEntry(y, m) : null;
+    if (entry && entry.data) byDuration = entry.data;
+  }
+
+  let disabledCount = 0;
+  let checkedStillAllowed = false;
+  const allowedInputs = [];
+
+  durationInputs.forEach(input => {
+    const val = input.value; // '1h', '1.5h', '2h', '2.5h'
+    const durKey = val.replace('h', '');
+    let allowed = true;
+
+    if (byDuration && byDuration[durKey] && byDuration[durKey][selectedDateISO]) {
+      const dayInfo = byDuration[durKey][selectedDateISO];
+      allowed = dayInfo.status === 'available' && Array.isArray(dayInfo.slots) && dayInfo.slots.includes(selectedTime);
+    }
+
+    input.disabled = !allowed;
+    const card = input.closest('.duration-card');
+    if (card) {
+      card.style.opacity = allowed ? '' : '0.35';
+      card.style.cursor = allowed ? '' : 'not-allowed';
+      card.style.borderColor = allowed ? '' : 'rgba(239, 68, 68, 0.4)';
+    }
+
+    const priceEl = document.getElementById(priceIds[val]);
+    if (priceEl) {
+      priceEl.textContent = allowed ? defaultPrices[val] : 'Non disponibile';
+    }
+
+    if (allowed) {
+      allowedInputs.push(input);
+      if (input.checked) checkedStillAllowed = true;
+    } else {
+      disabledCount++;
+    }
+  });
+
+  // Se la durata attualmente selezionata non entra in questa fascia, passa automaticamente alla migliore consentita
+  if (!checkedStillAllowed && allowedInputs.length > 0) {
+    const preferred = allowedInputs.find(i => i.value === '1.5h') || allowedInputs[allowedInputs.length - 1];
+    preferred.checked = true;
+    updateRealTimeCost();
+  }
+
+  if (noteEl) {
+    if (disabledCount > 0 && selectedTime && allowedInputs.length > 0) {
+      const maxLabel = allowedInputs[allowedInputs.length - 1].value.replace('h', ' ore').replace('1 ore', '1 ora');
+      noteEl.textContent = `ℹ️ Per le ore ${selectedTime} è disponibile una durata fino a ${maxLabel} (fascia successiva già occupata).`;
+      noteEl.style.display = 'block';
+    } else {
+      noteEl.style.display = 'none';
+      noteEl.textContent = '';
+    }
+  }
 }
 
 
@@ -1072,8 +1175,6 @@ function init() {
   });
   document.getElementsByName('durata').forEach(el => el.addEventListener('change', () => {
     updateRealTimeCost();
-    // Rigenera il calendario con la nuova durata selezionata
-    renderInteractiveCalendar(currentCalYear, currentCalMonth);
   }));
   document.getElementsByName('pacchetto').forEach(el => el.addEventListener('change', updateRealTimeCost));
   document.getElementById('patatine').addEventListener('change', updateRealTimeCost);

@@ -1,6 +1,6 @@
 /**
  * GOOGLE APPS SCRIPT — Bowling Valdera
- * Versione: 3.4 — Fasce orarie aggiornate (Lun-Ven: 17:00, 18:15, 19:30 | Sab: 16:00, 17:15, 18:30, 19:45 | Dom: 19:30)
+ * Versione: 3.5 — Orari tondi (Lun-Ven: 17:00, 18:00, 19:00, 20:00 | Sab: 16:00, 17:00, 18:00, 19:00, 20:00 | Dom/Festivi: 19:30), buffer pulizia 0 min
  *
  * ISTRUZIONI PER IL DEPLOY:
  * 1. Aprire il progetto Google Apps Script collegato al Google Sheet.
@@ -37,12 +37,12 @@ const PRICE_LANE = { '1h': 30.0, '1.5h': 45.0, '2h': 60.0, '2.5h': 75.0 };
 const PRICE_FRIES        = 2.0;
 const PRICE_CAKE_PHOTO   = 5.0;
 const MAX_PLAYERS_PER_LANE = 6;
-const CLEANING_BUFFER_MS   = 15 * 60 * 1000; // 15 minuti di pulizia e rassetto piste
-const SLOT_MARGIN_MS       = 10 * 1000;      // 10s di margine ai bordi dello slot
+const CLEANING_BUFFER_MS   = 0;              // Nessun buffer extra: un turno 17:00-18:00 lascia libero dalle 18:00
+const SLOT_MARGIN_MS       = 10 * 1000;      // 10s di margine tecnico ai bordi per incastri esatti (es. 17:00-18:00 e 18:00-19:00)
 const DURATION_OPTIONS     = ['1', '1.5', '2', '2.5'];
 
 // Cache disponibilità: precalcolata e mantenuta aggiornata dai trigger (vedi setupAvailabilityTriggers)
-const AVAIL_CACHE_PREFIX       = 'cal_avail_v5_';
+const AVAIL_CACHE_PREFIX       = 'cal_avail_v6_';
 const AVAIL_CACHE_TTL_S        = 21600; // 6 ore (massimo consentito da CacheService)
 const AVAIL_PREWARM_MONTHS     = 3;     // mesi ricalcolati in anticipo (corrente + 2)
 const AVAIL_INVALIDATE_MONTHS  = 13;    // mesi invalidati quando cambia il calendario
@@ -52,12 +52,11 @@ const AVAIL_REFRESH_EVERY_MIN  = 10;    // frequenza trigger di riscaldamento ca
 // getDay(): 0 = Domenica ... 6 = Sabato
 const SLOT_RULES = [
   { time: '16:00', days: [6] },                  // Solo Sabato
-  { time: '17:00', days: [1, 2, 3, 4, 5] },      // Lun-Ven
-  { time: '17:15', days: [6] },                  // Solo Sabato
-  { time: '18:15', days: [1, 2, 3, 4, 5] },      // Lun-Ven
-  { time: '18:30', days: [6] },                  // Solo Sabato
-  { time: '19:30', days: [0, 1, 2, 3, 4, 5] },   // Lun-Ven e Domenica
-  { time: '19:45', days: [6] }                   // Solo Sabato
+  { time: '17:00', days: [1, 2, 3, 4, 5, 6] },   // Lun-Sab
+  { time: '18:00', days: [1, 2, 3, 4, 5, 6] },   // Lun-Sab
+  { time: '19:00', days: [1, 2, 3, 4, 5, 6] },   // Lun-Sab
+  { time: '19:30', days: [0] },                  // Domenica (e festivi aperti)
+  { time: '20:00', days: [1, 2, 3, 4, 5, 6] }    // Lun-Sab
 ];
 
 /** Elenco orari prenotabili per un giorno della settimana (0=Dom ... 6=Sab) */
@@ -828,7 +827,7 @@ function createCalendarEvent(data, props, rowNumber) {
       'Festeggiato: ' + (data.festeggiato || '-') + '\n' +
       'Età: ' + (data.anni ? data.anni + ' anni' : '-') + '\n' +
       'Orario Gioco Bowling: ' + data.ora + ' - ' + gameEndStr + ' (' + durataReadable + ')\n' +
-      'Rassetto Piste (15 min): Piste libere alle ' + cleanEndStr + '\n' +
+      (CLEANING_BUFFER_MS > 0 ? 'Rassetto Piste: Piste libere alle ' + cleanEndStr + '\n' : '') +
       'Totale Stimato Festa: €' + (typeof data.totale === 'number' ? data.totale.toFixed(2) : data.totale) + '\n' +
       '----------------------------------------\n' +
       'Genitore / Cliente: ' + data.cliente + '\n' +
