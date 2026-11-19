@@ -14,6 +14,12 @@
  * 5. Per attivare l'automazione della mail a 12 ore:
  *      Selezionare dal menu a tendina delle funzioni in alto la funzione "setupDepositTrigger"
  *      e cliccare "Esegui" una sola volta (oppure chiamare l'URL ?action=setup_trigger&token=BV2026-f8e3a7d2b9c4-k7p1).
+ * 6. VELOCITÀ CALENDARIO (consigliato):
+ *    a) Editor → "Servizi" (+) → aggiungere "Google Calendar API" (identificatore: Calendar).
+ *       Le letture degli eventi diventano molto più veloci (se assente si usa CalendarApp in automatico).
+ *    b) Eseguire una sola volta la funzione "setupAvailabilityTriggers": installa il ricalcolo automatico
+ *       della cache disponibilità a ogni modifica del Google Calendar + ogni 10 minuti.
+ *       (Viene installata anche in automatico chiamando ?action=setup_trigger&token=... o alla prima prenotazione.)
  */
 
 const SHEET_NAME = 'dati_compleanno';
@@ -34,6 +40,13 @@ const MAX_PLAYERS_PER_LANE = 6;
 const CLEANING_BUFFER_MS   = 15 * 60 * 1000; // 15 minuti di pulizia e rassetto piste
 const SLOT_MARGIN_MS       = 10 * 1000;      // 10s di margine ai bordi dello slot
 const DURATION_OPTIONS     = ['1', '1.5', '2', '2.5'];
+
+// Cache disponibilità: precalcolata e mantenuta aggiornata dai trigger (vedi setupAvailabilityTriggers)
+const AVAIL_CACHE_PREFIX       = 'cal_avail_v5_';
+const AVAIL_CACHE_TTL_S        = 21600; // 6 ore (massimo consentito da CacheService)
+const AVAIL_PREWARM_MONTHS     = 3;     // mesi ricalcolati in anticipo (corrente + 2)
+const AVAIL_INVALIDATE_MONTHS  = 13;    // mesi invalidati quando cambia il calendario
+const AVAIL_REFRESH_EVERY_MIN  = 10;    // frequenza trigger di riscaldamento cache
 
 // Fasce orarie ufficiali (IDENTICHE a SLOT_RULES in script.js).
 // getDay(): 0 = Domenica ... 6 = Sabato
@@ -233,42 +246,30 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 3. Richiesta disponibilità dell'intero mese (tutte le durate in un'unica risposta/cache)
+    // 3. Richiesta disponibilità del mese (tutte le durate) — risposta servita dalla cache precalcolata.
+    //    Parametro opzionale months=N (1-3): restituisce anche i mesi successivi nella stessa risposta.
     if (action === 'month_availability') {
       const year          = parseInt(e.parameter.year, 10);
       const month         = parseInt(e.parameter.month, 10); // 1-12
-      const durationHours = parseFloat(e.parameter.duration) || 1.5;
-      const durKey        = String(durationHours);
+      const monthsCount   = Math.min(3, Math.max(1, parseInt(e.parameter.months, 10) || 1));
 
-      if (!year || !month) {
+      if (!year || !month || month < 1 || month > 12) {
         return ContentService
           .createTextOutput(JSON.stringify({ success: false, error: 'Anno o mese mancanti' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
 
-      const cacheKey = 'cal_avail_v4_' + year + '_' + month;
-      const cache    = CacheService.getScriptCache();
-      const cached   = cache.get(cacheKey);
+      const monthsData = getMonthsAvailabilityCached(year, month, monthsCount);
+      const response = {
+        success:    true,
+        year:       year,
+        month:      month,
+        byDuration: monthsData[year + '-' + month] || {}
+      };
+      if (monthsCount > 1) response.monthsData = monthsData;
 
-      let byDuration;
-      if (cached) {
-        byDuration = JSON.parse(cached);
-      } else {
-        byDuration = getMonthAvailabilityAllDurations(year, month);
-        try {
-          cache.put(cacheKey, JSON.stringify(byDuration), 30); // 30 secondi di cache per aggiornamenti quasi in tempo reale
-        } catch (eCache) {}
-      }
-
-      const days = byDuration[durKey] || byDuration['1.5'] || {};
       return ContentService
-        .createTextOutput(JSON.stringify({
-          success:    true,
-          year:       year,
-          month:      month,
-          byDuration: byDuration,
-          days:       days
-        }))
+        .createTextOutput(JSON.stringify(response))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -326,6 +327,55 @@ function normalizeCalendarEvents(rawEvents) {
   return normalized;
 }
 
+/** Converte una data "YYYY-MM-DD" (eventi a giorno intero dell'API REST) in ms, nel fuso dello script */
+function allDayDateToMs(dateStr) {
+  const p = String(dateStr).split('-');
+  return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10), 0, 0, 0).getTime();
+}
+
+/**
+ * Legge gli eventi del calendario nell'intervallo indicato e li restituisce normalizzati.
+ * Usa il servizio avanzato "Google Calendar API" (Calendar.Events.list) se abilitato nel progetto:
+ * una sola chiamata REST con i soli campi necessari, molto più veloce dei getter di CalendarApp.
+ * Se il servizio avanzato non è abilitato o fallisce, ricade automaticamente su CalendarApp.
+ */
+function fetchNormalizedEvents(calendar, startDate, endDate) {
+  if (typeof Calendar !== 'undefined' && Calendar.Events && typeof Calendar.Events.list === 'function') {
+    try {
+      const out = [];
+      let pageToken = null;
+      do {
+        const resp = Calendar.Events.list(calendar.getId(), {
+          timeMin:      startDate.toISOString(),
+          timeMax:      endDate.toISOString(),
+          singleEvents: true,
+          showDeleted:  false,
+          maxResults:   2500,
+          pageToken:    pageToken || undefined,
+          fields:       'nextPageToken,items(status,summary,start,end)'
+        });
+        const items = (resp && resp.items) || [];
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
+          if (!it || it.status === 'cancelled' || !it.start || !it.end) continue;
+          const isAllDay = !!it.start.date && !it.start.dateTime;
+          out.push({
+            isAllDay:   isAllDay,
+            startMs:    isAllDay ? allDayDateToMs(it.start.date) : new Date(it.start.dateTime).getTime(),
+            endMs:      isAllDay ? allDayDateToMs(it.end.date)   : new Date(it.end.dateTime).getTime(),
+            titleUpper: isAllDay ? String(it.summary || '').toUpperCase() : ''
+          });
+        }
+        pageToken = resp && resp.nextPageToken;
+      } while (pageToken);
+      return out;
+    } catch (errAdv) {
+      console.warn('Calendar API avanzata non disponibile, uso CalendarApp:', errAdv);
+    }
+  }
+  return normalizeCalendarEvents(calendar.getEvents(startDate, endDate));
+}
+
 /** Restituisce { status, label } se un evento a giorno intero blocca la giornata, altrimenti null */
 function findAllDayBlock(events, dayStartMs, dayEndMs) {
   for (let i = 0; i < events.length; i++) {
@@ -360,7 +410,7 @@ function invalidateMonthAvailabilityCache(isoDate) {
     if (parts.length < 2) return;
     const year  = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10);
-    CacheService.getScriptCache().remove('cal_avail_v4_' + year + '_' + month);
+    CacheService.getScriptCache().remove(AVAIL_CACHE_PREFIX + year + '_' + month);
   } catch (e) {}
 }
 
@@ -416,8 +466,8 @@ function buildMonthDaysMap(events, year, month, durationHours, numDays, todayDat
 }
 
 // --- RECUPERO DISPONIBILITÀ MENSILE PER TUTTE LE DURATE IN UN'UNICA CHIAMATA ---
-function getMonthAvailabilityAllDurations(year, month) {
-  const calendar = getTargetCalendar(getProps(), false);
+function getMonthAvailabilityAllDurations(year, month, calendarOpt) {
+  const calendar = calendarOpt || getTargetCalendar(getProps(), false);
   if (!calendar) return {};
 
   const firstDay = new Date(year, month - 1, 1, 0, 0, 0);
@@ -425,7 +475,7 @@ function getMonthAvailabilityAllDurations(year, month) {
   const lastDay  = new Date(year, month - 1, numDays, 23, 59, 59);
 
   // Una sola lettura da Google Calendar per tutto il mese, normalizzata in memoria
-  const events = normalizeCalendarEvents(calendar.getEvents(firstDay, lastDay));
+  const events = fetchNormalizedEvents(calendar, firstDay, lastDay);
 
   const now = new Date();
   const pad = function(n) { return (n < 10 ? '0' : '') + n; };
@@ -442,6 +492,139 @@ function getMonthAvailabilityAllDurations(year, month) {
 function getMonthAvailability(year, month, durationHours) {
   const all = getMonthAvailabilityAllDurations(year, month);
   return all[String(durationHours)] || all['1.5'] || {};
+}
+
+/** Elenco [ {year, month}, ... ] di "count" mesi consecutivi a partire da year/month */
+function listConsecutiveMonths(year, month, count) {
+  const out = [];
+  let y = year, m = month;
+  for (let i = 0; i < count; i++) {
+    out.push({ year: y, month: m });
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+  return out;
+}
+
+/**
+ * Restituisce { 'YYYY-M': byDuration } per "count" mesi consecutivi.
+ * Legge tutto dalla cache in un'unica chiamata (getAll); calcola solo i mesi mancanti.
+ */
+function getMonthsAvailabilityCached(year, month, count) {
+  const months = listConsecutiveMonths(year, month, count);
+  const cache  = CacheService.getScriptCache();
+  const keys   = months.map(function (mm) { return AVAIL_CACHE_PREFIX + mm.year + '_' + mm.month; });
+
+  let cachedMap = {};
+  try { cachedMap = cache.getAll(keys) || {}; } catch (eGet) { cachedMap = {}; }
+
+  const result   = {};
+  const toPut    = {};
+  let calendar   = null;
+
+  for (let i = 0; i < months.length; i++) {
+    const mm  = months[i];
+    const key = keys[i];
+    let byDuration = null;
+    if (cachedMap[key]) {
+      try { byDuration = JSON.parse(cachedMap[key]); } catch (eParse) { byDuration = null; }
+    }
+    if (!byDuration) {
+      if (!calendar) calendar = getTargetCalendar(getProps(), false);
+      byDuration = getMonthAvailabilityAllDurations(mm.year, mm.month, calendar);
+      toPut[key] = JSON.stringify(byDuration);
+    }
+    result[mm.year + '-' + mm.month] = byDuration;
+  }
+
+  if (Object.keys(toPut).length > 0) {
+    try { cache.putAll(toPut, AVAIL_CACHE_TTL_S); } catch (ePut) {}
+  }
+  return result;
+}
+
+/**
+ * Ricalcola SUBITO la cache dei prossimi mesi (corrente + 2) e invalida quelli più lontani.
+ * Eseguita automaticamente:
+ *  - ogni volta che un evento del Google Calendar viene creato/modificato/cancellato (trigger onEventUpdated);
+ *  - ogni AVAIL_REFRESH_EVERY_MIN minuti come rete di sicurezza (trigger temporizzato).
+ */
+function rebuildAvailabilityCache() {
+  const cache    = CacheService.getScriptCache();
+  const now      = new Date();
+  const startY   = now.getFullYear();
+  const startM   = now.getMonth() + 1;
+
+  // Invalida i mesi lontani (verranno ricalcolati alla prima richiesta)
+  try {
+    const farMonths = listConsecutiveMonths(startY, startM, AVAIL_INVALIDATE_MONTHS).slice(AVAIL_PREWARM_MONTHS);
+    cache.removeAll(farMonths.map(function (mm) { return AVAIL_CACHE_PREFIX + mm.year + '_' + mm.month; }));
+  } catch (eRem) {}
+
+  // Ricalcola e scrive in cache i mesi più richiesti
+  const calendar = getTargetCalendar(getProps(), false);
+  if (!calendar) return;
+  const toPut = {};
+  const months = listConsecutiveMonths(startY, startM, AVAIL_PREWARM_MONTHS);
+  for (let i = 0; i < months.length; i++) {
+    const mm = months[i];
+    toPut[AVAIL_CACHE_PREFIX + mm.year + '_' + mm.month] =
+      JSON.stringify(getMonthAvailabilityAllDurations(mm.year, mm.month, calendar));
+  }
+  try { cache.putAll(toPut, AVAIL_CACHE_TTL_S); } catch (ePut) {}
+}
+
+/**
+ * Installa i trigger che mantengono la cache delle disponibilità sempre calda.
+ * Da eseguire UNA VOLTA dall'editor di Apps Script (menu funzioni → setupAvailabilityTriggers → Esegui),
+ * oppure tramite ?action=setup_trigger&token=...
+ */
+function setupAvailabilityTriggers() {
+  const triggers = ScriptApp.getProjectTriggers();
+  for (let i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'rebuildAvailabilityCache') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+
+  // 1. Ricalcolo immediato a ogni modifica del Google Calendar (anche manuale dello staff)
+  const props = getProps();
+  let calendarOwner = props.calendarId;
+  if (!calendarOwner || calendarOwner === 'primary') {
+    calendarOwner = Session.getEffectiveUser().getEmail();
+  }
+  try {
+    ScriptApp.newTrigger('rebuildAvailabilityCache')
+      .forUserCalendar(calendarOwner)
+      .onEventUpdated()
+      .create();
+  } catch (errCal) {
+    console.warn('Impossibile creare il trigger sul calendario (' + calendarOwner + '):', errCal);
+  }
+
+  // 2. Rete di sicurezza: ricalcolo periodico
+  ScriptApp.newTrigger('rebuildAvailabilityCache')
+    .timeBased()
+    .everyMinutes(AVAIL_REFRESH_EVERY_MIN)
+    .create();
+
+  rebuildAvailabilityCache();
+  console.log('✅ Trigger cache disponibilità installati (calendario: ' + calendarOwner + ').');
+}
+
+/** Installa i trigger della cache disponibilità se mancanti */
+function ensureAvailabilityTriggersInstalled() {
+  try {
+    const triggers = ScriptApp.getProjectTriggers();
+    for (let i = 0; i < triggers.length; i++) {
+      if (triggers[i].getHandlerFunction() === 'rebuildAvailabilityCache') return true;
+    }
+    setupAvailabilityTriggers();
+    return true;
+  } catch (err) {
+    console.warn('Impossibile verificare/creare i trigger della cache disponibilità:', err);
+    return false;
+  }
 }
 
 // =========================================================================
@@ -541,6 +724,8 @@ function doPost(e) {
 
     // 6. Assicura che il trigger per il promemoria 12 ore sia attivo nel sistema
     ensureDepositTriggerInstalled();
+    // 7. Assicura che i trigger della cache disponibilità siano attivi
+    ensureAvailabilityTriggersInstalled();
 
     return ContentService
       .createTextOutput(JSON.stringify({ success: true, totale: verifiedTotal }))
@@ -572,7 +757,7 @@ function checkCalendarAvailability(dateStr, timeStr, durationHours) {
   // Un'unica chiamata getEvents per la giornata (copre sia eventi a giorno intero sia sovrapposizioni orarie)
   const dayStart = new Date(dateStr + 'T00:00:00');
   const dayEnd   = new Date(dateStr + 'T23:59:59');
-  const events   = normalizeCalendarEvents(calendar.getEvents(dayStart, dayEnd));
+  const events   = fetchNormalizedEvents(calendar, dayStart, dayEnd);
 
   if (findAllDayBlock(events, dayStart.getTime(), dayEnd.getTime())) {
     return false;
@@ -1721,6 +1906,19 @@ function handleCheckReminders(e) {
     }
   }
 
+  // Trigger della cache disponibilità calendario (ricalcolo a ogni modifica + ogni 10 min)
+  let availabilityTriggersActive = false;
+  try {
+    if (e.parameter.action === 'setup_trigger') {
+      setupAvailabilityTriggers();
+      availabilityTriggersActive = true;
+    } else {
+      availabilityTriggersActive = ensureAvailabilityTriggersInstalled();
+    }
+  } catch (errAvail) {
+    console.warn('Errore setupAvailabilityTriggers:', errAvail);
+  }
+
   const options = {};
   if (e.parameter.force_row) {
     options.forceRow = parseInt(e.parameter.force_row, 10);
@@ -1733,6 +1931,7 @@ function handleCheckReminders(e) {
   report.success = true;
   report.triggerActive = triggerActive;
   report.triggerCount = triggerCount;
+  report.availabilityTriggersActive = availabilityTriggersActive;
   report.serverTime = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Europe/Rome', 'dd/MM/yyyy HH:mm:ss');
 
   return ContentService

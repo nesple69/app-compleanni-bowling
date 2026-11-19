@@ -102,6 +102,8 @@ function startBooking() {
   document.querySelector('header').style.display = 'flex';
   showStep('step2');
   updateRealTimeCost();
+  // I dati reali sono di norma già arrivati durante la landing: se no, riusa la richiesta in corso
+  syncCurrentMonthAvailability(false);
 }
 
 function showStep(stepId) {
@@ -217,11 +219,52 @@ function popolaBiglietto(dati) {
   }
 }
 
+// ------------------------------------------------------------
+// Caricamento on-demand di html2canvas / jsPDF (non bloccano più l'apertura del sito)
+// ------------------------------------------------------------
+const LIB_URLS = {
+  html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+  jspdf:       'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+};
+const libLoadPromises = {};
+
+function loadScriptOnce(url) {
+  if (libLoadPromises[url]) return libLoadPromises[url];
+  libLoadPromises[url] = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => {
+      delete libLoadPromises[url];
+      reject(new Error('Impossibile caricare ' + url));
+    };
+    document.head.appendChild(s);
+  });
+  return libLoadPromises[url];
+}
+
+function ensureHtml2Canvas() {
+  return window.html2canvas ? Promise.resolve() : loadScriptOnce(LIB_URLS.html2canvas);
+}
+
+function ensureJsPDF() {
+  return (window.jspdf && window.jspdf.jsPDF) ? Promise.resolve() : loadScriptOnce(LIB_URLS.jspdf);
+}
+
+// Precarica le librerie in background quando l'utente si avvicina al biglietto
+function preloadInvitationLibs() {
+  const run = () => { ensureHtml2Canvas().catch(() => {}); ensureJsPDF().catch(() => {}); };
+  if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout: 3000 });
+  else setTimeout(run, 500);
+}
+
 async function scaricaImmagine() {
   const card = document.getElementById('invitationCard');
   if (!card) return;
 
   try {
+    await ensureHtml2Canvas();
     const canvas = await html2canvas(card, {
       scale: 3,
       useCORS: true,
@@ -245,6 +288,7 @@ async function scaricaPDF() {
   if (!card) return;
 
   try {
+    await Promise.all([ensureHtml2Canvas(), ensureJsPDF()]);
     const canvas = await html2canvas(card, {
       scale: 3,
       useCORS: true,
@@ -356,6 +400,7 @@ function updateSummaryView() {
   }
 
   document.getElementById('totalSpan').textContent = data.total;
+  preloadInvitationLibs();
   return menuSummary;
 }
 
@@ -445,85 +490,178 @@ function sanitizeMonthDays(days) {
   return days;
 }
 
-let monthAvailabilityController = null;
+// ------------------------------------------------------------
+// CACHE DISPONIBILITÀ (stale-while-revalidate su localStorage)
+// - Dato "fresco" (< CACHE_TTL_MS): usato senza nuove richieste.
+// - Dato "vecchio" (< STALE_MAX_AGE_MS): mostrato SUBITO, poi aggiornato in background.
+// ------------------------------------------------------------
+const CACHE_TTL_MS        = 60 * 1000;            // 60 s: dato considerato aggiornato
+const STALE_MAX_AGE_MS    = 24 * 60 * 60 * 1000;  // 24 h: dato mostrabile in attesa dell'aggiornamento
+const AUTO_REFRESH_MS     = 60 * 1000;            // refresh automatico mentre il calendario è visibile
+const MONTH_CACHE_PREFIX  = 'bv_cal_';
+const MONTH_CACHE_VERSION = 'v9';
 
-const CACHE_TTL_MS = 30 * 1000; // 30 secondi di validità cache lato client
+const monthFetchInFlight = {};   // richieste in corso per mese (evita doppioni)
+let calendarDataVerified = false; // true quando la griglia mostra dati reali aggiornati
 
 function getMonthCacheKey(year, month) {
-  return `bv_cal_${year}_${month}_v8`;
+  return `${MONTH_CACHE_PREFIX}${year}_${month}_${MONTH_CACHE_VERSION}`;
 }
 
 function getSelectedDurationKey() {
   return (document.querySelector('input[name="durata"]:checked')?.value || '1.5h').replace('h', '');
 }
 
-function readCachedMonthForDuration(year, month, durationKey) {
+function getNextMonth(year, month) {
+  return month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+}
+
+function getAvailabilityApiBaseUrl() {
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  return (isLocal && new URLSearchParams(window.location.search).get('mock') === '1') ? '/api' : SCRIPT_URL;
+}
+
+function readMonthEntry(year, month) {
   const cacheKey = getMonthCacheKey(year, month);
   let entry = monthAvailabilityCache[cacheKey];
   if (!entry) {
     try {
-      const sCached = sessionStorage.getItem(cacheKey);
-      if (sCached) {
-        entry = JSON.parse(sCached);
+      const stored = localStorage.getItem(cacheKey);
+      if (stored) {
+        entry = JSON.parse(stored);
         monthAvailabilityCache[cacheKey] = entry;
       }
     } catch (e) {}
   }
-  if (!entry || !entry.timestamp || (Date.now() - entry.timestamp) >= CACHE_TTL_MS) {
-    return null;
-  }
-  if (entry.data && entry.data[durationKey]) {
-    return sanitizeMonthDays(entry.data[durationKey]);
-  }
-  return null;
+  return (entry && entry.timestamp && entry.data) ? entry : null;
 }
 
-async function fetchMonthAvailability(year, month, signal, forceRefresh = false) {
-  const selectedDuration = getSelectedDurationKey();
-  if (!forceRefresh) {
-    const cachedDays = readCachedMonthForDuration(year, month, selectedDuration);
-    if (cachedDays) return cachedDays;
-  }
-
+function writeMonthEntry(year, month, byDuration) {
+  if (!byDuration || typeof byDuration !== 'object') return;
+  const cacheKey = getMonthCacheKey(year, month);
+  const entry = { timestamp: Date.now(), data: byDuration };
+  monthAvailabilityCache[cacheKey] = entry;
   try {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const baseUrl = (isLocal && new URLSearchParams(window.location.search).get('mock') === '1')
-      ? '/api'
-      : SCRIPT_URL;
+    localStorage.setItem(cacheKey, JSON.stringify(entry));
+  } catch (e) {}
+}
 
-    const url = `${baseUrl}?action=month_availability&year=${year}&month=${month}&duration=${selectedDuration}&_t=${Date.now()}`;
-    const res = await fetch(url, { signal, cache: 'no-store' });
+function isEntryFresh(entry) {
+  return !!(entry && (Date.now() - entry.timestamp) < CACHE_TTL_MS);
+}
+
+function isEntryUsable(entry) {
+  return !!(entry && (Date.now() - entry.timestamp) < STALE_MAX_AGE_MS);
+}
+
+/** Estrae (copia) i giorni per la durata scelta da una voce di cache */
+function getDaysFromEntry(entry, durationKey) {
+  if (!entry || !entry.data) return null;
+  const days = entry.data[durationKey] || entry.data['1.5'];
+  if (!days) return null;
+  return sanitizeMonthDays(JSON.parse(JSON.stringify(days)));
+}
+
+/** Rimuove dal localStorage le disponibilità troppo vecchie o di versioni precedenti */
+function pruneOldMonthCache() {
+  try {
+    const toRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || key.indexOf(MONTH_CACHE_PREFIX) !== 0) continue;
+      if (!key.endsWith('_' + MONTH_CACHE_VERSION)) { toRemove.push(key); continue; }
+      try {
+        const entry = JSON.parse(localStorage.getItem(key));
+        if (!entry || !entry.timestamp || (Date.now() - entry.timestamp) > STALE_MAX_AGE_MS) toRemove.push(key);
+      } catch (e) { toRemove.push(key); }
+    }
+    toRemove.forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
+}
+
+/**
+ * Una sola richiesta al server per il mese richiesto + il successivo (months=2).
+ * Compatibile anche col vecchio backend (che restituisce solo byDuration/days del mese richiesto).
+ * Restituisce la voce di cache aggiornata del mese richiesto, oppure null in caso di errore.
+ */
+async function requestMonthsFromServer(year, month) {
+  const url = `${getAvailabilityApiBaseUrl()}?action=month_availability&year=${year}&month=${month}&months=2&duration=${getSelectedDurationKey()}&_t=${Date.now()}`;
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
+    if (!data || !data.success) throw new Error((data && data.error) || 'Risposta non valida');
 
-    if (data && data.success && (data.byDuration || data.days)) {
-      const cacheKey = getMonthCacheKey(year, month);
-      const existingData = (monthAvailabilityCache[cacheKey] && monthAvailabilityCache[cacheKey].data) || {};
-      const byDuration = data.byDuration
-        ? data.byDuration
-        : { ...existingData, [selectedDuration]: data.days };
-
-      const cacheEntry = { timestamp: Date.now(), data: byDuration };
-      monthAvailabilityCache[cacheKey] = cacheEntry;
-      try {
-        sessionStorage.setItem(cacheKey, JSON.stringify(cacheEntry));
-      } catch (e) {}
-
-      const days = byDuration[selectedDuration] || byDuration['1.5'] || data.days;
-      return sanitizeMonthDays(days);
+    if (data.monthsData && typeof data.monthsData === 'object') {
+      Object.keys(data.monthsData).forEach(k => {
+        const [y, m] = k.split('-').map(Number);
+        if (y && m) writeMonthEntry(y, m, data.monthsData[k]);
+      });
     }
+    if (data.byDuration) {
+      writeMonthEntry(year, month, data.byDuration);
+    } else if (data.days) {
+      const existing = readMonthEntry(year, month);
+      writeMonthEntry(year, month, { ...((existing && existing.data) || {}), [getSelectedDurationKey()]: data.days });
+    }
+    return readMonthEntry(year, month);
   } catch (err) {
-    if (err && err.name === 'AbortError') return null;
-    console.warn('Recupero disponibilità mensile non riuscito, uso fallback locale:', err);
+    console.warn('Recupero disponibilità mensile non riuscito:', err);
+    return null;
   }
-  return null;
 }
 
-function prefetchNextMonth(year, month) {
-  const nextYear  = month === 12 ? year + 1 : year;
-  const nextMonth = month === 12 ? 1 : month + 1;
-  if (readCachedMonthForDuration(nextYear, nextMonth, getSelectedDurationKey())) return;
-  fetchMonthAvailability(nextYear, nextMonth);
+/**
+ * Garantisce di avere i dati del mese: restituisce subito la cache fresca,
+ * altrimenti riusa la richiesta già in corso o ne avvia una nuova.
+ * Precarica anche il mese successivo (arriva nella stessa risposta).
+ */
+function ensureMonthData(year, month, force = false) {
+  const entry = readMonthEntry(year, month);
+  if (!force && isEntryFresh(entry)) return Promise.resolve(entry);
+
+  const key = `${year}_${month}`;
+  if (monthFetchInFlight[key]) return monthFetchInFlight[key];
+
+  const p = requestMonthsFromServer(year, month).finally(() => {
+    if (monthFetchInFlight[key] === p) delete monthFetchInFlight[key];
+  });
+  monthFetchInFlight[key] = p;
+
+  // Il mese successivo arriva nella stessa risposta (backend nuovo);
+  // con il vecchio backend viene scaricato subito dopo con una seconda richiesta.
+  const next = getNextMonth(year, month);
+  const nextKey = `${next.year}_${next.month}`;
+  if (!monthFetchInFlight[nextKey] && !isEntryFresh(readMonthEntry(next.year, next.month))) {
+    const pn = p.then(() => {
+      const nextEntry = readMonthEntry(next.year, next.month);
+      return isEntryFresh(nextEntry) ? nextEntry : requestMonthsFromServer(next.year, next.month);
+    }).finally(() => {
+      if (monthFetchInFlight[nextKey] === pn) delete monthFetchInFlight[nextKey];
+    });
+    monthFetchInFlight[nextKey] = pn;
+  }
+  return p;
+}
+
+function isCalendarVisible() {
+  const step2 = document.getElementById('step2');
+  const bookingSteps = document.getElementById('bookingSteps');
+  if (!step2 || step2.style.display === 'none') return false;
+  if (bookingSteps && bookingSteps.style.display === 'none') return false;
+  return true;
+}
+
+/** Aggiorna il messaggio sotto agli orari in base allo stato della verifica */
+function refreshAvailabilityMsg() {
+  const msg = document.getElementById('availability-msg');
+  if (!msg || msg.dataset.available === 'false') return;
+  if (!document.getElementById('data')?.value) return;
+  msg.textContent = calendarDataVerified
+    ? '✅ Orario Disponibile!'
+    : '⏳ Verifica disponibilità in tempo reale…';
+  msg.style.color = '#fff';
+  msg.dataset.available = 'true';
 }
 
 async function renderInteractiveCalendar(year, month) {
@@ -558,7 +696,7 @@ async function renderInteractiveCalendar(year, month) {
   const pad = n => (n < 10 ? '0' : '') + n;
   const todayISO = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
-  // RENDERING ISTANTANEO (0 ms): tutti i giorni futuri sono subito attivi, verdi e cliccabili
+  // RENDERING ISTANTANEO con le regole locali (orari ufficiali e festivi)
   for (let day = 1; day <= numDays; day++) {
     const cell = document.createElement('div');
     cell.className = 'cal-day-cell';
@@ -580,7 +718,6 @@ async function renderInteractiveCalendar(year, month) {
       cell.classList.add('closed');
       cell.title = 'Festivo (Chiuso)';
     } else {
-      // SUBITO DISPONIBILE: l'utente può cliccare immediatamente al 1° millisecondo!
       cell.classList.add('available');
       cell.title = 'Disponibile';
       cell.onclick = () => selectCalendarDate(isoDate, getSlotsForIsoDate(isoDate));
@@ -591,20 +728,35 @@ async function renderInteractiveCalendar(year, month) {
     }
   }
 
-  // Pre-seleziona subito la prima data disponibile (senza aspettare il server!)
+  currentRenderedYear  = year;
+  currentRenderedMonth = month;
+  currentDayCells      = dayCells;
+
+  // Dati già noti (cache locale anche di qualche ora fa): applicati SUBITO, senza attendere il server
+  const cachedEntry = readMonthEntry(year, month);
+  const cachedDays  = isEntryUsable(cachedEntry) ? getDaysFromEntry(cachedEntry, getSelectedDurationKey()) : null;
+  calendarDataVerified = !!(cachedDays && isEntryFresh(cachedEntry));
+
+  // Pre-seleziona subito la prima data disponibile
   if (!selectedDateISO || !document.getElementById('data').value) {
-    const firstAvailKey = Object.keys(dayCells).find(iso => dayCells[iso].classList.contains('available'));
+    const firstAvailKey = Object.keys(dayCells).find(iso => {
+      if (!dayCells[iso].classList.contains('available')) return false;
+      return !cachedDays || !cachedDays[iso] || cachedDays[iso].status === 'available';
+    });
     if (firstAvailKey) {
-      selectCalendarDate(firstAvailKey, getSlotsForIsoDate(firstAvailKey));
+      const cachedSlots = cachedDays && cachedDays[firstAvailKey] ? cachedDays[firstAvailKey].slots : null;
+      selectCalendarDate(firstAvailKey, cachedSlots || getSlotsForIsoDate(firstAvailKey));
     }
   }
 
-  currentRenderedYear = year;
-  currentRenderedMonth = month;
-  currentDayCells = dayCells;
+  if (cachedDays) {
+    applyMonthAvailabilityToGrid(year, month, cachedDays, dayCells);
+  }
+  refreshAvailabilityMsg();
+
   startCalendarAutoRefresh();
 
-  // Sincronizzazione in background non bloccante con Google Calendar
+  // Aggiornamento dal server (parte SUBITO, anche se l'utente è ancora sulla landing page)
   syncCurrentMonthAvailability(false);
 }
 
@@ -665,46 +817,44 @@ function applyMonthAvailabilityToGrid(year, month, daysData, dayCells) {
   }
 }
 
-async function syncCurrentMonthAvailability(forceRefresh = true) {
+async function syncCurrentMonthAvailability(forceRefresh = false) {
   if (!currentRenderedYear || !currentRenderedMonth) return;
-  const step2 = document.getElementById('step2');
-  const bookingSteps = document.getElementById('bookingSteps');
-  if (!step2 || step2.style.display === 'none') return;
-  if (bookingSteps && bookingSteps.style.display === 'none') return;
-
-  if (monthAvailabilityController) {
-    monthAvailabilityController.abort();
-  }
-  monthAvailabilityController = new AbortController();
-  const controller = monthAvailabilityController;
-  const targetYear = currentRenderedYear;
+  const targetYear  = currentRenderedYear;
   const targetMonth = currentRenderedMonth;
   const targetCells = currentDayCells;
 
-  const daysData = await fetchMonthAvailability(targetYear, targetMonth, controller.signal, forceRefresh);
-  if (!daysData || controller !== monthAvailabilityController) return;
-  if (targetYear !== currentRenderedYear || targetMonth !== currentRenderedMonth) return;
+  const entry = await ensureMonthData(targetYear, targetMonth, forceRefresh);
+  if (!entry) return;
+  // L'utente ha cambiato mese/durata nel frattempo: la griglia è stata ricreata
+  if (targetYear !== currentRenderedYear || targetMonth !== currentRenderedMonth || targetCells !== currentDayCells) return;
+
+  const daysData = getDaysFromEntry(entry, getSelectedDurationKey());
+  if (!daysData) return;
 
   applyMonthAvailabilityToGrid(targetYear, targetMonth, daysData, targetCells);
-  prefetchNextMonth(targetYear, targetMonth);
+  calendarDataVerified = isEntryFresh(entry);
+  refreshAvailabilityMsg();
 }
 
 function startCalendarAutoRefresh() {
   if (calendarAutoRefreshTimer) return;
   calendarAutoRefreshTimer = setInterval(() => {
-    if (!document.hidden) {
+    if (!document.hidden && isCalendarVisible()) {
       syncCurrentMonthAvailability(true);
     }
-  }, 30000);
+  }, AUTO_REFRESH_MS);
 
+  // Al ritorno sulla pagina: aggiorna solo se il dato non è più fresco
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-      syncCurrentMonthAvailability(true);
+    if (!document.hidden && isCalendarVisible()) {
+      syncCurrentMonthAvailability(false);
     }
   });
 
   window.addEventListener('focus', () => {
-    syncCurrentMonthAvailability(true);
+    if (isCalendarVisible()) {
+      syncCurrentMonthAvailability(false);
+    }
   });
 }
 
@@ -743,9 +893,8 @@ function selectCalendarDate(isoDate, availableSlots) {
 
   const msg = document.getElementById('availability-msg');
   if (msg) {
-    msg.textContent = '✅ Orario Disponibile!';
-    msg.style.color = '#fff';
     msg.dataset.available = 'true';
+    refreshAvailabilityMsg();
   }
   const nextBtn = document.getElementById('nextFromStep2ToStep1');
   if (nextBtn) nextBtn.disabled = false;
@@ -956,7 +1105,9 @@ function init() {
     });
   }
 
-  // Caricamento iniziale del calendario
+  // Caricamento iniziale del calendario: la richiesta delle disponibilità reali
+  // parte subito, mentre l'utente è ancora sulla landing page.
+  pruneOldMonthCache();
   renderInteractiveCalendar(currentCalYear, currentCalMonth);
 
   updateMinParticipants();

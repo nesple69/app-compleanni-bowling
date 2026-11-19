@@ -15,14 +15,8 @@
 
 
 
-/* Lobster Font - Local */
-@font-face {
-  font-family: var(--font-title);
-  src: url('Lobster-Regular.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
+/* Lobster: caricato da Google Fonts (woff2 ~25 KB) in index.html.
+   La vecchia @font-face locale (TTF 406 KB) era doppia e non valida (var() nel nome) ed è stata rimossa. */
 
 :root {
   --color-primary: #6366f1;
@@ -101,7 +95,7 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background: url('assets/background.jpg?v=2.0') center center / cover no-repeat fixed;
+  background: url('assets/background_web.jpg?v=3.0') center center / cover no-repeat fixed;
   opacity: 0.45;
   z-index: -1;
   pointer-events: none;
