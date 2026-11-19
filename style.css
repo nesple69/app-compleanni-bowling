@@ -95,7 +95,7 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background: url('assets/background_web.jpg?v=3.0') center center / cover no-repeat fixed;
+  background: url('assets/background_web.jpg?v=4.0') center center / cover no-repeat fixed;
   opacity: 0.45;
   z-index: -1;
   pointer-events: none;
