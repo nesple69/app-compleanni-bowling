@@ -208,8 +208,8 @@ function calculateAuthoritativeTotal(data) {
   const laneCost = lanes * (PRICE_LANE[durationKey] || 45.0);
 
   const menuPrice = MENU_PRICES[data.menu] !== undefined ? MENU_PRICES[data.menu] : 10.0;
-  const friesCost = (data.patatine === 'Sì') ? PRICE_FRIES : 0;
-  const photoCost = (data.foto_torta === 'Sì') ? PRICE_CAKE_PHOTO : 0;
+  const friesCost = (data.patatine === 'S\u00EC') ? PRICE_FRIES : 0;
+  const photoCost = (data.foto_torta === 'S\u00EC') ? PRICE_CAKE_PHOTO : 0;
 
   const totalFoodCost = part * (menuPrice + friesCost);
   return Math.round((laneCost + totalFoodCost + photoCost) * 100) / 100;
@@ -300,7 +300,7 @@ function doGet(e) {
 // --- HELPERS CONDIVISI PER DISPONIBILITÀ GOOGLE CALENDAR ---
 function getTargetCalendar(props, throwIfMissing) {
   if (!props.calendarId) {
-    if (throwIfMissing) throw new Error('CALENDAR_ID non configurato nelle Proprietà dello script.');
+    if (throwIfMissing) throw new Error('CALENDAR_ID non configurato nelle Propriet\u00E0 dello script.');
     return null;
   }
   const calendar = CalendarApp.getCalendarById(props.calendarId) || (throwIfMissing ? null : CalendarApp.getDefaultCalendar());
@@ -608,7 +608,7 @@ function setupAvailabilityTriggers() {
     .create();
 
   rebuildAvailabilityCache();
-  console.log('✅ Trigger cache disponibilità installati (calendario: ' + calendarOwner + ').');
+  console.log('\u2705 Trigger cache disponibilit\u00E0 installati (calendario: ' + calendarOwner + ').');
 }
 
 /** Installa i trigger della cache disponibilità se mancanti */
@@ -621,7 +621,7 @@ function ensureAvailabilityTriggersInstalled() {
     setupAvailabilityTriggers();
     return true;
   } catch (err) {
-    console.warn('Impossibile verificare/creare i trigger della cache disponibilità:', err);
+    console.warn('Impossibile verificare/creare i trigger della cache disponibilit\u00E0:', err);
     return false;
   }
 }
@@ -638,7 +638,7 @@ function doPost(e) {
     return ContentService
       .createTextOutput(JSON.stringify({
         success: false,
-        error: 'Il server è occupato. Riprova tra pochi istanti.'
+        error: 'Il server \u00E8 occupato. Riprova tra pochi istanti.'
       }))
       .setMimeType(ContentService.MimeType.JSON);
   }
@@ -663,7 +663,7 @@ function doPost(e) {
       return ContentService
         .createTextOutput(JSON.stringify({
           success: false,
-          error: 'Spiacenti, l\'orario selezionato è appena stato prenotato da un altro utente.'
+          error: 'Spiacenti, l\'orario selezionato \u00E8 appena stato prenotato da un altro utente.'
         }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -708,8 +708,8 @@ function doPost(e) {
     ]);
 
     const lastRow = sheet.getLastRow();
-    sheet.getRange(lastRow, 16).setNumberFormat('€#,##0.00');
-    sheet.getRange(lastRow, 23, 1, 2).setNumberFormat('€#,##0.00');
+    sheet.getRange(lastRow, 16).setNumberFormat('\u20AC#,##0.00');
+    sheet.getRange(lastRow, 23, 1, 2).setNumberFormat('\u20AC#,##0.00');
 
     // 4. Creazione Evento Google Calendar con Link di Registrazione Caparra per l'Operatore
     const eventId = createCalendarEvent(data, props, lastRow);
@@ -780,9 +780,10 @@ function createCalendarEvent(data, props, rowNumber) {
   const fullOccupiedEnd = new Date(gameEndMs + CLEANING_BUFFER_MS);
   const end             = fullOccupiedEnd; // L'evento blocca il calendario fino al termine della pulizia
 
-  const timeZone        = Session.getScriptTimeZone() || 'Europe/Rome';
-  const gameEndStr      = Utilities.formatDate(new Date(gameEndMs), timeZone, 'HH:mm');
-  const cleanEndStr     = Utilities.formatDate(fullOccupiedEnd, timeZone, 'HH:mm');
+  const timeZone          = Session.getScriptTimeZone() || 'Europe/Rome';
+  const gameEndStr        = Utilities.formatDate(new Date(gameEndMs), timeZone, 'HH:mm');
+  const cleanEndStr       = Utilities.formatDate(fullOccupiedEnd, timeZone, 'HH:mm');
+  const bookingCreatedStr = Utilities.formatDate(new Date(), timeZone, 'dd/MM/yyyy HH:mm');
 
   const durationMap = {
     '1h':   '1 Ora',
@@ -820,22 +821,23 @@ function createCalendarEvent(data, props, rowNumber) {
   };
 
   const buildDesc = function (eventId) {
-    return '🔴 STATO CAPARRA: IN ATTESA (Da versare)\n' +
-      '👉 CLICCA QUI PER REGISTRARE LA CAPARRA INCASSATA:\n' +
-      buildPayUrl(eventId) + '\n' +
+    const safePayHref = buildPayUrl(eventId).replace(/&/g, '&amp;');
+    return '\uD83D\uDD34 STATO CAPARRA: IN ATTESA (Da versare)\n' +
+      '\uD83D\uDC49 <a href="' + safePayHref + '">CLICCA QUI PER REGISTRARE LA CAPARRA INCASSATA</a>\n' +
       '========================================\n' +
       'Festeggiato: ' + (data.festeggiato || '-') + '\n' +
-      'Età: ' + (data.anni ? data.anni + ' anni' : '-') + '\n' +
+      'Et\u00E0: ' + (data.anni ? data.anni + ' anni' : '-') + '\n' +
       'Orario Gioco Bowling: ' + data.ora + ' - ' + gameEndStr + ' (' + durataReadable + ')\n' +
       (CLEANING_BUFFER_MS > 0 ? 'Rassetto Piste: Piste libere alle ' + cleanEndStr + '\n' : '') +
-      'Totale Stimato Festa: €' + (typeof data.totale === 'number' ? data.totale.toFixed(2) : data.totale) + '\n' +
+      'Totale Stimato Festa: \u20AC' + (typeof data.totale === 'number' ? data.totale.toFixed(2) : data.totale) + '\n' +
+      'Prenotazione effettuata il: ' + bookingCreatedStr + '\n' +
       '----------------------------------------\n' +
       'Genitore / Cliente: ' + data.cliente + '\n' +
       'Tel: ' + data.telefono + '\n' +
       'Email: ' + data.email + '\n' +
       'Partecipanti: ' + data.partecipanti + ' persone\n' +
-      'Menu: ' + data.menu + (data.patatine === 'Sì' ? ' + Patatine' : '') + '\n' +
-      'Torta: ' + data.torta + (data.foto_torta === 'Sì' ? ' (+ Foto)' : '') + '\n' +
+      'Menu: ' + data.menu + (data.patatine === 'S\u00EC' ? ' + Patatine' : '') + '\n' +
+      'Torta: ' + data.torta + (data.foto_torta === 'S\u00EC' ? ' (+ Foto)' : '') + '\n' +
       'Scritta Torta: ' + (data.scritta_torta || '-') + '\n' +
       'Allergie / Intolleranze: ' + (data.dettagli_allergie || 'Nessuna') + '\n' +
       'Note / Richieste: ' + (data.altre_richieste || '-');
@@ -984,7 +986,7 @@ function renderPayForm(e) {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Caparra Già Registrata - Bowling Valdera</title>
+        <title>Caparra Gi\u00E0 Registrata - Bowling Valdera</title>
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #0f172a; margin: 0; padding: 20px; color: #2d3748; }
           .card { max-width: 480px; margin: 20px auto; background: #fff; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); overflow: hidden; }
@@ -1000,31 +1002,31 @@ function renderPayForm(e) {
       <body>
         <div class="card">
           <div class="header">
-            <h2 style="margin:0;">🎳 Bowling Valdera</h2>
+            <h2 style="margin:0;">\uD83C\uDFB3 Bowling Valdera</h2>
             <p style="margin:5px 0 0 0; opacity:0.9;">Gestione Cassa Compleanni</p>
           </div>
           <div class="content" style="text-align: center;">
-            <p><span class="badge">✅ CAPARRA GIÀ REGISTRATA</span></p>
+            <p><span class="badge">\u2705 CAPARRA GI\u00C0 REGISTRATA</span></p>
             <h3 style="margin:10px 0;">Festa di ${festeggiato} ${anni ? '('+anni+' anni)' : ''}</h3>
             <p style="color:#64748b; margin-top:0;">Genitore: <strong>${cliente}</strong> &bull; Tel: <a href="tel:${telefono}">${telefono}</a></p>
             
             <div class="info-box" style="text-align: left;">
-              <p style="margin:4px 0;">📅 <strong>Data Festa:</strong> ${dataFesta} ore ${ora}</p>
-              <p style="margin:4px 0;">💰 <strong>Caparra Incassata:</strong> <span class="total">€ ${caparraNum.toFixed(2)}</span> (${metodoPag})</p>
-              <p style="margin:4px 0;">🕒 <strong>Registrata il:</strong> ${dataIncasso}</p>
+              <p style="margin:4px 0;">\uD83D\uDCC5 <strong>Data Festa:</strong> ${dataFesta} ore ${ora}</p>
+              <p style="margin:4px 0;">\uD83D\uDCB0 <strong>Caparra Incassata:</strong> <span class="total">\u20AC ${caparraNum.toFixed(2)}</span> (${metodoPag})</p>
+              <p style="margin:4px 0;">\uD83D\uDD52 <strong>Registrata il:</strong> ${dataIncasso}</p>
               <hr style="border:0; border-top:1px dashed #cbd5e1; margin:10px 0;">
-              <p style="margin:4px 0;">💳 <strong>Saldo Rimanente alla Festa:</strong> <span class="rem">€ ${saldoNum.toFixed(2)}</span></p>
+              <p style="margin:4px 0;">\uD83D\uDCB3 <strong>Saldo Rimanente alla Festa:</strong> <span class="rem">\u20AC ${saldoNum.toFixed(2)}</span></p>
             </div>
             
-            <p style="color:#475569; font-size:14px;">L'evento su Google Calendar è confermato in <strong style="color:#16a34a;">VERDE (${cognome} - ${ora} CAPARRA OK)</strong>.</p>
-            <button type="button" onclick="window.top.close(); window.close();" class="btn-cal" style="width:100%; border:none; cursor:pointer;">✖ Chiudi questa scheda</button>
+            <p style="color:#475569; font-size:14px;">L'evento su Google Calendar \u00E8 confermato in <strong style="color:#16a34a;">VERDE (${cognome} - ${ora} CAPARRA OK)</strong>.</p>
+            <button type="button" onclick="window.top.close(); window.close();" class="btn-cal" style="width:100%; border:none; cursor:pointer;">\u2716 Chiudi questa scheda</button>
           </div>
         </div>
       </body>
       </html>
     `;
     return HtmlService.createHtmlOutput(htmlAlready)
-      .setTitle('Caparra Già Registrata - Bowling Valdera')
+      .setTitle('Caparra Gi\u00E0 Registrata - Bowling Valdera')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
@@ -1063,7 +1065,7 @@ function renderPayForm(e) {
     <body>
       <div class="card">
         <div class="header" id="cardHeader">
-          <h2 style="margin:0; font-size: 22px;" id="headerTitle">🎳 Registrazione Caparra</h2>
+          <h2 style="margin:0; font-size: 22px;" id="headerTitle">\uD83C\uDFB3 Registrazione Caparra</h2>
           <p style="margin:4px 0 0 0; opacity:0.85; font-size: 14px;">Cassa Compleanni &bull; Bowling Valdera</p>
         </div>
 
@@ -1071,20 +1073,20 @@ function renderPayForm(e) {
           <div class="summary-box">
             <div style="font-size: 16px; font-weight: bold; color: #b71c1c; margin-bottom: 4px;">Festa di ${festeggiato} ${anni ? '('+anni+' anni)' : ''}</div>
             <div>Genitore: <strong>${cliente}</strong> (Tel: <a href="tel:${telefono}">${telefono}</a>)</div>
-            <div>Data Festa: 📅 <strong>${dataFesta}</strong> ore <strong>${ora}</strong></div>
+            <div>Data Festa: \uD83D\uDCC5 <strong>${dataFesta}</strong> ore <strong>${ora}</strong></div>
             <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #cbd5e1; font-size: 15px;">
-              Totale Stimato Festa: <strong>€ ${totaleNum.toFixed(2)}</strong>
+              Totale Stimato Festa: <strong>\u20AC ${totaleNum.toFixed(2)}</strong>
             </div>
           </div>
 
           <form id="cassaForm" onsubmit="return submitDeposit(event)">
             <div class="input-group">
-              <label class="label" for="amount">Importo Caparra Ricevuta (€):</label>
+              <label class="label" for="amount">Importo Caparra Ricevuta (\u20AC):</label>
               <input type="number" id="amount" name="amount" class="input-text" step="0.50" min="1" max="${totaleNum > 0 ? totaleNum * 2 : 1000}" value="50.00" required>
               <div class="quick-btns">
-                <button type="button" class="q-btn" onclick="setVal(30)">30 €</button>
-                <button type="button" class="q-btn" onclick="setVal(50)">50 €</button>
-                <button type="button" class="q-btn" onclick="setVal(100)">100 €</button>
+                <button type="button" class="q-btn" onclick="setVal(30)">30 \u20AC</button>
+                <button type="button" class="q-btn" onclick="setVal(50)">50 \u20AC</button>
+                <button type="button" class="q-btn" onclick="setVal(100)">100 \u20AC</button>
                 <button type="button" class="q-btn" onclick="setVal(${totaleNum})">Totale</button>
               </div>
             </div>
@@ -1108,30 +1110,30 @@ function renderPayForm(e) {
             </div>
 
             <button type="submit" id="submitBtn" class="btn-submit">
-              🟢 REGISTRA INCASSO E CONFERMA
+              \uD83D\uDFE2 REGISTRA INCASSO E CONFERMA
             </button>
             <div id="errBox" class="err-box"></div>
           </form>
         </div>
 
         <div class="content" id="successView" style="display:none; text-align:center;">
-          <div style="font-size: 52px; margin-bottom: 8px;">🎉</div>
+          <div style="font-size: 52px; margin-bottom: 8px;">\uD83C\uDF89</div>
           <h2 style="color: #15803d; margin: 0 0 8px 0;">Caparra Registrata!</h2>
           <p style="color: #64748b; margin: 0;">Festa di <strong>${festeggiato}</strong> (${cliente})</p>
 
           <div class="total-box">
-            <p style="margin: 4px 0; font-size: 15px; color: #166534;">💰 Caparra incassata: <strong id="resAmount">€ 50.00</strong> (<span id="resMethod">Contanti</span>)</p>
-            <p style="margin: 4px 0; font-size: 13px; color: #475569;">🕒 Registrata il: <span id="resTime">-</span></p>
+            <p style="margin: 4px 0; font-size: 15px; color: #166534;">\uD83D\uDCB0 Caparra incassata: <strong id="resAmount">\u20AC 50.00</strong> (<span id="resMethod">Contanti</span>)</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #475569;">\uD83D\uDD52 Registrata il: <span id="resTime">-</span></p>
             <hr style="border: 0; border-top: 1px dashed #86efac; margin: 8px 0;">
-            <p style="margin: 4px 0; font-size: 16px; font-weight: bold; color: #14532d;">💳 Saldo rimanente alla festa: <span id="resSaldo">€ 0.00</span></p>
+            <p style="margin: 4px 0; font-size: 16px; font-weight: bold; color: #14532d;">\uD83D\uDCB3 Saldo rimanente alla festa: <span id="resSaldo">\u20AC 0.00</span></p>
           </div>
 
           <p style="font-size: 14px; color: #475569; line-height: 1.5;">
-            🟢 Evento su Google Calendar aggiornato in <strong>VERDE</strong>:<br>
+            \uD83D\uDFE2 Evento su Google Calendar aggiornato in <strong>VERDE</strong>:<br>
             <strong id="resCalTitle">${cognome} - ${ora} (CAPARRA OK)</strong>
           </p>
 
-          <button type="button" onclick="window.top.close(); window.close();" class="btn-cal" style="width:100%; border:none; cursor:pointer;">✖ Chiudi questa scheda</button>
+          <button type="button" onclick="window.top.close(); window.close();" class="btn-cal" style="width:100%; border:none; cursor:pointer;">\u2716 Chiudi questa scheda</button>
         </div>
       </div>
 
@@ -1149,13 +1151,13 @@ function renderPayForm(e) {
 
         function showSuccess(res) {
           document.getElementById('cardHeader').className = 'header success-hdr';
-          document.getElementById('headerTitle').textContent = '✅ Caparra Confermata';
+          document.getElementById('headerTitle').textContent = '\u2705 Caparra Confermata';
           document.getElementById('formView').style.display = 'none';
           document.getElementById('successView').style.display = 'block';
-          document.getElementById('resAmount').textContent = '€ ' + parseFloat(res.amount || 0).toFixed(2);
+          document.getElementById('resAmount').textContent = '\u20AC ' + parseFloat(res.amount || 0).toFixed(2);
           document.getElementById('resMethod').textContent = res.method || 'Contanti';
           document.getElementById('resTime').textContent = res.nowFormatted || '';
-          document.getElementById('resSaldo').textContent = '€ ' + parseFloat(res.saldoRimanente || 0).toFixed(2);
+          document.getElementById('resSaldo').textContent = '\u20AC ' + parseFloat(res.saldoRimanente || 0).toFixed(2);
           if (res.updatedTitle) {
             document.getElementById('resCalTitle').textContent = res.updatedTitle;
           }
@@ -1168,7 +1170,7 @@ function renderPayForm(e) {
         function showError(msg) {
           var btn = document.getElementById('submitBtn');
           btn.disabled = false;
-          btn.textContent = '🟢 REGISTRA INCASSO E CONFERMA';
+          btn.textContent = '\uD83D\uDFE2 REGISTRA INCASSO E CONFERMA';
           var eb = document.getElementById('errBox');
           eb.textContent = 'Errore: ' + msg;
           eb.style.display = 'block';
@@ -1191,7 +1193,7 @@ function renderPayForm(e) {
           }
 
           btn.disabled = true;
-          btn.textContent = '⏳ Registrazione su Calendar in corso...';
+          btn.textContent = '\u23F3 Registrazione su Calendar in corso...';
 
           var payload = {
             row: ROW_NUM,
@@ -1370,23 +1372,23 @@ function repairAllCalendarLinks() {
         '&token=' + encodeURIComponent(props.apiSecret);
 
       const desc = ev.getDescription() || '';
-      if (stato !== 'VERSATA' && desc.indexOf(correctUrl) === -1) {
-        let newDesc = desc.replace(/https?:\/\/[^\s\n]+/g, function(matchedUrl) {
+      const safeCorrectHref = correctUrl.replace(/&/g, '&amp;');
+      if (stato !== 'VERSATA' && desc.indexOf(correctUrl) === -1 && desc.indexOf(safeCorrectHref) === -1) {
+        let newDesc = desc.replace(/https?:\/\/[^\s\n"<>]+/g, function(matchedUrl) {
           if (
             matchedUrl.indexOf('vercel.app') !== -1 ||
             matchedUrl.indexOf('compleanni-2') !== -1 ||
             matchedUrl.indexOf('action=pay_form') !== -1 ||
             matchedUrl.indexOf('cassa') !== -1
           ) {
-            return correctUrl;
+            return desc.indexOf('<a href="') !== -1 ? safeCorrectHref : correctUrl;
           }
           return matchedUrl;
         });
 
         if (newDesc === desc && desc.indexOf('CLICCA QUI PER REGISTRARE') === -1) {
-          newDesc = '🔴 STATO CAPARRA: IN ATTESA (Da versare)\n' +
-            '👉 CLICCA QUI PER REGISTRARE LA CAPARRA INCASSATA:\n' +
-            correctUrl + '\n' +
+          newDesc = '\uD83D\uDD34 STATO CAPARRA: IN ATTESA (Da versare)\n' +
+            '\uD83D\uDC49 <a href="' + safeCorrectHref + '">CLICCA QUI PER REGISTRARE LA CAPARRA INCASSATA</a>\n' +
             '========================================\n' + desc;
         }
 
@@ -1394,10 +1396,10 @@ function repairAllCalendarLinks() {
           try {
             ev.setDescription(newDesc);
             updatedCount++;
-            console.log('✅ Riga ' + rowNum + ' (' + fest + '): Link caparra aggiornato su Google Calendar.');
+            console.log('\u2705 Riga ' + rowNum + ' (' + fest + '): Link caparra aggiornato su Google Calendar.');
             details.push({ row: rowNum, festeggiato: fest, cliente: cli, title: ev.getTitle(), status: 'LINK_AGGIORNATO', url: correctUrl });
           } catch (eDesc) {
-            console.warn('⚠️ Riga ' + rowNum + ' (' + fest + '): Impossibile modificare descrizione evento (' + eDesc.message + ').');
+            console.warn('\u26A0\uFE0F Riga ' + rowNum + ' (' + fest + '): Impossibile modificare descrizione evento (' + eDesc.message + ').');
             details.push({ row: rowNum, festeggiato: fest, cliente: cli, title: ev.getTitle(), status: 'ERRORE_MODIFICA_DESC: ' + eDesc.message, url: correctUrl });
           }
         } else {
@@ -1409,8 +1411,8 @@ function repairAllCalendarLinks() {
           try {
             ev.setColor(CalendarApp.EventColor.GREEN);
             const curTitle = ev.getTitle() || '';
-            if (/^[🟢🔴🟡\s]+/.test(curTitle)) {
-              ev.setTitle(curTitle.replace(/^[🟢🔴🟡\s]+/, '').trim());
+            if (/^[\uD83D\uDFE2\uD83D\uDD34\uD83D\uDFE1\s]+/.test(curTitle)) {
+              ev.setTitle(curTitle.replace(/^[\uD83D\uDFE2\uD83D\uDD34\uD83D\uDFE1\s]+/, '').trim());
               updatedCount++;
             }
           } catch (eClean) {}
@@ -1473,7 +1475,7 @@ function saveDepositCore(params) {
     saldoRimanente,
     method,
     nowFormatted,
-    'ANNULLATO (Caparra già incassata)'
+    'ANNULLATO (Caparra gi\u00E0 incassata)'
   ]]);
 
   let updatedTitle = '';
@@ -1490,7 +1492,7 @@ function saveDepositCore(params) {
         // Aggiorna titolo evento nel formato "ROSSI - 18:00 (CAPARRA OK)" (senza emoji pallino iniziale)
         try {
           const rawTitle = event.getTitle() || '';
-          let cleanTitle = rawTitle.replace(/^[🟢🔴🟡\s]+/, '').replace(/\s*\([^)]*\)$/, '').trim();
+          let cleanTitle = rawTitle.replace(/^[\uD83D\uDFE2\uD83D\uDD34\uD83D\uDFE1\s]+/, '').replace(/\s*\([^)]*\)$/, '').trim();
           if (!cleanTitle) {
             const cognome = (rowData[3] || 'PRENOTAZIONE').toString().trim().split(/\s+/).pop();
             const rawOra = rowData[7];
@@ -1505,10 +1507,10 @@ function saveDepositCore(params) {
 
         const currentDesc = event.getDescription() || '';
         const updatedHeader = 
-          '🟢 STATO CAPARRA: VERSATA E CONFERMATA ✅\n' +
-          '💰 Caparra Incassata: € ' + amount.toFixed(2) + ' (' + method + ')\n' +
-          '🕒 Registrata il: ' + nowFormatted + '\n' +
-          '💳 SALDO RIMANENTE DA INCASSARE ALLA FESTA: € ' + saldoRimanente.toFixed(2) + '\n' +
+          '\uD83D\uDFE2 STATO CAPARRA: VERSATA E CONFERMATA \u2705\n' +
+          '\uD83D\uDCB0 Caparra Incassata: \u20AC ' + amount.toFixed(2) + ' (' + method + ')\n' +
+          '\uD83D\uDD52 Registrata il: ' + nowFormatted + '\n' +
+          '\uD83D\uDCB3 SALDO RIMANENTE DA INCASSARE ALLA FESTA: \u20AC ' + saldoRimanente.toFixed(2) + '\n' +
           '========================================\n';
 
         // Rimuove eventuale vecchio blocco di stato caparra e il relativo link
@@ -1517,7 +1519,7 @@ function saveDepositCore(params) {
         if (festIdx !== -1) {
           strippedDesc = strippedDesc.substring(festIdx);
         } else {
-          strippedDesc = strippedDesc.replace(/^🔴 STATO CAPARRA[\s\S]*?========================================\r?\n?/, '');
+          strippedDesc = strippedDesc.replace(/^\uD83D\uDD34 STATO CAPARRA[\s\S]*?========================================\r?\n?/, '');
         }
         event.setDescription(updatedHeader + strippedDesc);
       }
@@ -1541,18 +1543,21 @@ function saveDepositCore(params) {
             <p>ti confermiamo di aver registrato il versamento della caparra per la festa di compleanno di <strong>${escapeHtml(festeggiato)}</strong>!</p>
             
             <div style="background: #f8fafc; border-left: 4px solid #2e7d32; border-radius: 8px; padding: 15px; margin: 20px 0;">
-              <p style="margin: 4px 0;">💰 <strong>Importo Caparra Versata:</strong> &euro;${amount.toFixed(2)} (${escapeHtml(method)})</p>
-              <p style="margin: 4px 0;">🕒 <strong>Data Registrazione:</strong> ${nowFormatted}</p>
+              <p style="margin: 4px 0;">\uD83D\uDCB0 <strong>Importo Caparra Versata:</strong> &euro;${amount.toFixed(2)} (${escapeHtml(method)})</p>
+              <p style="margin: 4px 0;">\uD83D\uDD52 <strong>Data Registrazione:</strong> ${nowFormatted}</p>
               <hr style="border:0; border-top: 1px dashed #cbd5e1; margin: 10px 0;">
-              <p style="margin: 4px 0; font-size: 16px;">💳 <strong>Saldo Rimanente da versare il giorno della festa:</strong> <strong style="color: #1b5e20;">&euro;${saldoRimanente.toFixed(2)}</strong></p>
+              <p style="margin: 4px 0; font-size: 16px;">\uD83D\uDCB3 <strong>Saldo Rimanente Stimato (salvo variazioni):</strong> <strong style="color: #1b5e20;">&euro;${saldoRimanente.toFixed(2)}</strong></p>
+              <p style="margin: 8px 0 0 0; font-size: 12.5px; line-height: 1.45; color: #555;">
+                &#x2139;&#xFE0F; <strong>Importo indicativo:</strong> eventuali variazioni successive (numero definitivo di partecipanti, aggiunta di patatine o altri extra) verranno ricalcolate al momento del saldo il giorno della festa. Vi chiediamo di confermarci il numero definitivo di partecipanti almeno <strong>3 giorni prima</strong> della festa.
+              </p>
             </div>
 
-            <p>La prenotazione è ora confermata al 100%! Vi aspettiamo per una giornata indimenticabile di divertimento e strike!</p>
+            <p>La prenotazione \u00E8 ora confermata al 100%! Vi aspettiamo per una giornata indimenticabile di divertimento e strike!</p>
             <p style="margin-top: 25px;">A presto,<br><strong>Staff Bowling Valdera</strong></p>
           </div>
         </div>
       `;
-      const receiptPlain = `Gentile ${cliente},\nti confermiamo la ricezione della caparra di €${amount.toFixed(2)} per la festa di ${festeggiato}.\nSaldo rimanente da saldare alla festa: €${saldoRimanente.toFixed(2)}.\nGrazie e a presto!\nBowling Valdera`;
+      const receiptPlain = `Gentile ${cliente},\nti confermiamo la ricezione della caparra di \u20AC${amount.toFixed(2)} per la festa di ${festeggiato}.\nSaldo rimanente stimato (salvo variazioni): \u20AC${saldoRimanente.toFixed(2)}.\nImporto indicativo: eventuali variazioni successive (numero definitivo di partecipanti, aggiunta di patatine o altri extra) verranno ricalcolate al saldo il giorno della festa. Vi chiediamo di confermarci il numero definitivo di partecipanti almeno 3 giorni prima della festa.\nGrazie e a presto!\nBowling Valdera`;
       safeSendEmail(customerEmail, receiptSubject, receiptPlain, receiptHtml, props);
     } catch (eMail) {
       console.warn('Errore invio ricevuta caparra al cliente:', eMail);
@@ -1610,21 +1615,21 @@ function handleSaveDeposit(e) {
     </head>
     <body>
       <div class="card">
-        <div class="icon">🎉</div>
+        <div class="icon">\uD83C\uDF89</div>
         <h2 style="color: #15803d; margin: 0 0 10px 0;">Caparra Registrata!</h2>
         <p style="color: #64748b; margin: 0;">Festa di <strong>${escapeHtml(result.festeggiato)}</strong></p>
         
         <div class="total-box">
-          <p style="margin: 4px 0; font-size: 15px; color: #166534;">Caparra incassata: <strong>€ ${result.amount.toFixed(2)}</strong> (${escapeHtml(result.method)})</p>
+          <p style="margin: 4px 0; font-size: 15px; color: #166534;">Caparra incassata: <strong>\u20AC ${result.amount.toFixed(2)}</strong> (${escapeHtml(result.method)})</p>
           <hr style="border: 0; border-top: 1px dashed #86efac; margin: 8px 0;">
-          <p style="margin: 4px 0; font-size: 16px; font-weight: bold; color: #14532d;">Rimanente da incassare alla festa: € ${result.saldoRimanente.toFixed(2)}</p>
+          <p style="margin: 4px 0; font-size: 16px; font-weight: bold; color: #14532d;">Rimanente da incassare alla festa: \u20AC ${result.saldoRimanente.toFixed(2)}</p>
         </div>
 
         <p style="font-size: 14px; color: #475569;">
-          🟢 Evento Calendar aggiornato in <strong>VERDE</strong>.
+          \uD83D\uDFE2 Evento Calendar aggiornato in <strong>VERDE</strong>.
         </p>
 
-        <a href="https://calendar.google.com/calendar/r" target="_top" class="btn-cal">👉 Torna a Google Calendar</a>
+        <a href="https://calendar.google.com/calendar/r" target="_top" class="btn-cal">\uD83D\uDC49 Torna a Google Calendar</a>
       </div>
     </body>
     </html>
@@ -1741,7 +1746,7 @@ function checkAndSendDepositReminders(options) {
     // 1. Salta se la caparra è già versata
     if (statoCaparra === 'VERSATA') {
       report.skippedCount++;
-      report.actions.push({ row: rowIndex, festeggiato: festeggiato, status: 'SKIPPED: Caparra già versata' });
+      report.actions.push({ row: rowIndex, festeggiato: festeggiato, status: 'SKIPPED: Caparra gi\u00E0 versata' });
       continue;
     }
 
@@ -1753,7 +1758,7 @@ function checkAndSendDepositReminders(options) {
                         promemoriaStato !== '-';
     if (alreadySent) {
       report.skippedCount++;
-      report.actions.push({ row: rowIndex, festeggiato: festeggiato, status: 'SKIPPED: Promemoria già inviato (' + promemoriaStato + ')' });
+      report.actions.push({ row: rowIndex, festeggiato: festeggiato, status: 'SKIPPED: Promemoria gi\u00E0 inviato (' + promemoriaStato + ')' });
       continue;
     }
 
@@ -1818,7 +1823,7 @@ function checkAndSendDepositReminders(options) {
           
           <div style="background-color: #fff3cd; border: 2px solid #ffeeba; border-left: 6px solid #ffb300; padding: 16px 20px; border-radius: 8px; margin: 25px 0;">
             <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #856404; font-weight: bold;">
-              &#x26A0;&#xFE0F; Vogliamo ricordarle però che la procedura sarà conclusa e confermata definitivamente solo dopo il versamento di una caparra di 50&euro;, che potrà portare direttamente al Bowling Valdera entro 2 o 3 giorni dalla prenotazione.
+              &#x26A0;&#xFE0F; Vogliamo ricordarle per\u00F2 che la procedura sar\u00E0 conclusa e confermata definitivamente solo dopo il versamento di una caparra di 50&euro;, che potr\u00E0 portare direttamente al Bowling Valdera entro 2 o 3 giorni dalla prenotazione.
             </p>
           </div>
 
@@ -1842,7 +1847,7 @@ function checkAndSendDepositReminders(options) {
 `${saluto} signor/ra ${cliente},
 abbiamo ricevuto la sua richiesta di prenotazione per la festa di compleanno di ${festeggiato} (in data ${dataFesta} ore ${ora}) e abbiamo provveduto a registrarla nel nostro calendario.
 
-Vogliamo ricordarle però che la procedura sarà conclusa e confermata definitivamente solo dopo il versamento di una caparra di 50€, che potrà portare direttamente al Bowling Valdera entro 2 o 3 giorni dalla prenotazione.
+Vogliamo ricordarle per\u00F2 che la procedura sar\u00E0 conclusa e confermata definitivamente solo dopo il versamento di una caparra di 50\u20AC, che potr\u00E0 portare direttamente al Bowling Valdera entro 2 o 3 giorni dalla prenotazione.
 
 La ringraziamo per la fiducia concessaci e la aspettiamo!
 ${salutoFinale},
@@ -1857,7 +1862,7 @@ Via ToscoRomagnola, 127, Fornacette (PI) - Tel. 0587 420120`;
       sheet.getRange(rowIndex, 27).setValue(sentTime);
       report.sentCount++;
       report.actions.push({ row: rowIndex, festeggiato: festeggiato, email: email, status: 'INVIATO_CON_SUCCESSO alle ' + sentTime });
-      console.log('✅ Promemoria caparra inviato con successo a:', email, 'per riga:', rowIndex);
+      console.log('\u2705 Promemoria caparra inviato con successo a:', email, 'per riga:', rowIndex);
     } else {
       report.actions.push({ row: rowIndex, festeggiato: festeggiato, email: email, status: 'ERRORE_INVIO_MAIL' });
     }
@@ -1953,7 +1958,7 @@ function setupDepositTrigger() {
     .everyMinutes(30)
     .create();
 
-  console.log('✅ Trigger temporizzato (ogni 30 min) per invio promemoria caparra impostato con successo!');
+  console.log('\u2705 Trigger temporizzato (ogni 30 min) per invio promemoria caparra impostato con successo!');
 }
 
 // =========================================================================
@@ -2076,10 +2081,10 @@ function sendConfirmationEmail(data, props) {
           <p style="margin: 6px 0; font-size: 15px;">&#x1F554; <strong>Orario Inizio:</strong> ore ${safeOra}</p>
           <p style="margin: 6px 0; font-size: 15px;">&#x1F3B3; <strong>Durata Gioco Bowling:</strong> <strong style="color: #b71c1c;">${safeDurataText}</strong></p>
           <p style="margin: 6px 0; font-size: 15px;">&#x1F465; <strong>Numero Partecipanti:</strong> ${safePartec} invitati</p>
-          <p style="margin: 6px 0; font-size: 15px;">&#x1F355; <strong>Menu Scelto:</strong> ${safeMenu} ${safePatatine === 'Sì' ? '(con patatine fritte)' : ''}</p>
+          <p style="margin: 6px 0; font-size: 15px;">&#x1F355; <strong>Menu Scelto:</strong> ${safeMenu} ${safePatatine === 'S\u00EC' ? '(con patatine fritte)' : ''}</p>
           
           <div style="background: #fff8e1; border-left: 4px solid #ffb300; padding: 10px 14px; margin: 12px 0; border-radius: 4px;">
-            <p style="margin: 4px 0; font-size: 15px;">&#x1F382; <strong>Tipo di Torta Scelta:</strong> <strong>${safeTorta}</strong> ${safeFotoTorta === 'Sì' ? '<span style="color:#d32f2f; font-weight:bold;">(+ Foto Stampata)</span>' : ''}</p>
+            <p style="margin: 4px 0; font-size: 15px;">&#x1F382; <strong>Tipo di Torta Scelta:</strong> <strong>${safeTorta}</strong> ${safeFotoTorta === 'S\u00EC' ? '<span style="color:#d32f2f; font-weight:bold;">(+ Foto Stampata)</span>' : ''}</p>
             <p style="margin: 4px 0; font-size: 15px;">&#x270D;&#xFE0F; <strong>Scritta da fare sulla Torta:</strong> <strong style="color: #b71c1c; font-size: 16px;">"${safeScritta}"</strong></p>
           </div>
 
@@ -2088,12 +2093,15 @@ function sendConfirmationEmail(data, props) {
           
           <div style="margin-top: 15px; padding-top: 12px; border-top: 2px dashed #ddd;">
             <p style="margin: 4px 0; font-size: 18px; color: #b71c1c;">&#x1F4B0; <strong>Totale Stimato:</strong> &euro;${safeTotale}</p>
+            <p style="margin: 8px 0 0 0; font-size: 13px; line-height: 1.45; color: #555;">
+              &#x2139;&#xFE0F; <strong>Importo indicativo:</strong> il totale \u00E8 calcolato in base ai dati inseriti al momento della prenotazione. Eventuali variazioni successive (numero definitivo di partecipanti, aggiunta di patatine o altri extra) comporteranno il ricalcolo dell'importo finale al momento del saldo il giorno della festa. Vi chiediamo di confermarci il numero definitivo di partecipanti almeno <strong>3 giorni prima</strong> della festa.
+            </p>
           </div>
         </div>
 
         <div style="background-color: #fff3cd; border: 2px solid #ffeeba; border-left: 6px solid #ffb300; padding: 14px 18px; border-radius: 8px; margin: 20px 0; text-align: center;">
           <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #856404; font-weight: bold;">
-            &#x26A0;&#xFE0F; Per la conferma di questa prenotazione è necessario versare una caparra di 50&euro;, la preghiamo di recarsi al Bowling Valdera entro 2 o 3 giorni per definire l'accordo.
+            &#x26A0;&#xFE0F; Per la conferma di questa prenotazione \u00E8 necessario versare una caparra di 50&euro;, la preghiamo di recarsi al Bowling Valdera entro 2 o 3 giorni per definire l'accordo.
           </p>
         </div>
 
@@ -2152,12 +2160,14 @@ RIEPILOGO DELLA FESTA:
 - Orario Inizio: ${data.ora}
 - Durata Gioco Bowling: ${durataReadable}
 - Numero Partecipanti: ${data.partecipanti}
-- Menu Scelto: ${data.menu} ${data.patatine === 'Sì' ? '(con patatine fritte)' : ''}
-- Tipo di Torta: ${data.torta} ${data.foto_torta === 'Sì' ? '(con foto stampata)' : ''}
+- Menu Scelto: ${data.menu} ${data.patatine === 'S\u00EC' ? '(con patatine fritte)' : ''}
+- Tipo di Torta: ${data.torta} ${data.foto_torta === 'S\u00EC' ? '(con foto stampata)' : ''}
 - Scritta sulla Torta: "${data.scritta_torta || 'Nessuna'}"
-- Totale Stimato: €${safeTotale}
+- Totale Stimato: \u20AC${safeTotale}
 
-IMPORTANTE: Per la conferma di questa prenotazione è necessario versare una caparra di 50€ entro 2 o 3 giorni, la preghiamo di recarsi al Bowling Valdera per definire l'accordo.
+NOTA SUL PREZZO: l'importo \u00E8 indicativo ed \u00E8 calcolato sui dati inseriti oggi. Eventuali variazioni successive (numero definitivo di partecipanti, aggiunta di patatine o altri extra) verranno ricalcolate al saldo il giorno della festa. Vi chiediamo di confermarci il numero definitivo di partecipanti almeno 3 giorni prima della festa.
+
+IMPORTANTE: Per la conferma di questa prenotazione \u00E8 necessario versare una caparra di 50\u20AC entro 2 o 3 giorni, la preghiamo di recarsi al Bowling Valdera per definire l'accordo.
 
 RISPETTO DELL'ORARIO: vi preghiamo gentilmente di arrivare puntuali all'orario prenotato per non ritardare i compleanni successivi ed evitare di dover scalare i minuti di ritardo dalla durata della vostra partita.
 
@@ -2191,7 +2201,7 @@ function testSendEmail() {
     durata: '1.5h',
     partecipanti: 15,
     menu: 'Basic',
-    patatine: 'Sì',
+    patatine: 'S\u00EC',
     torta: 'Pan di Spagna Chantilly',
     scritta_torta: 'Auguri Luca!',
     foto_torta: 'No',
